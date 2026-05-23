@@ -576,23 +576,24 @@ function drawPlume(p) {
 
 function drawEvac() {
   evacGrp.clearLayers();
-  // The REAL order issued by Orange County Fire Authority — north of Garden Grove
-  // Blvd, east of Monarch St, south of Orangewood Ave, west of Beach Blvd
-  // (~40,000 residents). Authoritative: fixed, does not move with the model.
+  // The CURRENT (expanded) order from Orange County officials — north of Trask Ave,
+  // south of Ball Rd, east of Valley View St, west of Dale St (~40,000 residents
+  // across Garden Grove + parts of W. Anaheim, Stanton & Cypress). Authoritative:
+  // fixed, does not move with the model.
   const box = [
-    [33.7958, -118.0068],   // NW  Orangewood × Monarch
-    [33.7958, -117.9928],   // NE  Orangewood × Beach
-    [33.7744, -117.9928],   // SE  Garden Grove Blvd × Beach
-    [33.7744, -118.0068],   // SW  Garden Grove Blvd × Monarch
+    [33.8181, -118.0284],   // NW  Ball Rd × Valley View St
+    [33.8181, -117.9845],   // NE  Ball Rd × Dale St
+    [33.7669, -117.9845],   // SE  Trask Ave × Dale St
+    [33.7669, -118.0284],   // SW  Trask Ave × Valley View St
   ];
   L.polygon(box, {
     color:'#ffd000', weight:2, opacity:.85,
     fillColor:'#ffd000', fillOpacity:.05, dashArray:'6 4',
   })
-  .bindTooltip('<b style="color:#ffd000">OFFICIAL EVACUATION ORDER</b><br>OCFA · ~40,000 residents<br>N of Garden Grove Blvd · E of Monarch St<br>S of Orangewood Ave · W of Beach Blvd', {sticky:true})
+  .bindTooltip('<b style="color:#ffd000">OFFICIAL EVACUATION ORDER</b><br>~40,000 residents · GG + W. Anaheim, Stanton, Cypress<br>N of Trask Ave · S of Ball Rd<br>E of Valley View St · W of Dale St', {sticky:true})
   .addTo(evacGrp);
 
-  L.marker([33.7958, -118.0068], {
+  L.marker([33.8181, -118.0284], {
     icon: L.divIcon({
       className:'',
       html:`<div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,208,0,.9);background:rgba(10,12,15,.78);padding:2px 5px;border-radius:2px;white-space:nowrap;">OFFICIAL EVACUATION ORDER · ~40,000</div>`,
