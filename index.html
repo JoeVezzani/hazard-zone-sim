@@ -20,9 +20,8 @@
 <meta name="twitter:description" content="Interactive blast-radius & toxic-plume model. Drag the sliders.">
 <meta name="twitter:image" content="https://joevezzani.github.io/hazard-zone-sim/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%230a0c0f'/%3E%3Ccircle cx='50' cy='50' r='26' fill='%23ff2a2a'/%3E%3C/svg%3E">
-
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   :root {
@@ -32,10 +31,10 @@
   }
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
 
-  html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; -webkit-text-size-adjust:100%; }
+  html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; }
 
   /* ── layout ── */
-  #app { display:flex; flex-direction:column; height:100vh; height:100dvh; }
+  #app { display:flex; flex-direction:column; height:100vh; }
 
   #header {
     flex:0 0 auto;
@@ -49,18 +48,7 @@
   #header h1 { font-family:'Bebas Neue',sans-serif; font-size:.95rem; letter-spacing:.1em; color:#fff; }
   #header .sub { font-family:'Share Tech Mono',monospace; font-size:.58rem; color:var(--dim); margin-left:auto; }
 
-  /* mobile menu button — hidden on desktop */
-  #menuBtn {
-    display:none; align-items:center; gap:6px; margin-left:auto;
-    background:var(--border); color:var(--text);
-    border:1px solid var(--border); border-radius:4px;
-    font-family:'Share Tech Mono',monospace; font-size:.6rem; letter-spacing:.12em;
-    padding:6px 10px; cursor:pointer; -webkit-tap-highlight-color:transparent;
-  }
-  #menuBtn .bars { display:inline-flex; flex-direction:column; gap:2px; }
-  #menuBtn .bars i { width:13px; height:2px; background:var(--text); border-radius:1px; }
-
-  #body { display:flex; flex:1 1 0; min-height:0; position:relative; }
+  #body { display:flex; flex:1 1 0; min-height:0; }
 
   /* ── sidebar ── */
   #sidebar {
@@ -89,9 +77,8 @@
   .sl-row { margin-bottom:6px; }
   .sl-row label { display:flex; justify-content:space-between; font-size:.67rem; color:var(--dim); margin-bottom:2px; }
   .sl-row label span { font-family:'Share Tech Mono',monospace; color:var(--text); }
-  input[type=range] { width:100%;-webkit-appearance:none;appearance:none;height:3px;background:var(--border);border-radius:2px;outline:none; }
-  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:#2a6fff;cursor:pointer; }
-  input[type=range]::-moz-range-thumb { width:16px;height:16px;border:none;border-radius:50%;background:#2a6fff;cursor:pointer; }
+  input[type=range] { width:100%;-webkit-appearance:none;height:3px;background:var(--border);border-radius:2px;outline:none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#2a6fff;cursor:pointer; }
 
   /* legend */
   .leg { display:flex;align-items:center;gap:5px;font-size:.64rem;margin-bottom:3px;line-height:1.3; }
@@ -136,6 +123,25 @@
 
   ::-webkit-scrollbar{width:3px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 
+  /* ── standalone host enhancements (social + responsive) ──── */
+  html, body { -webkit-text-size-adjust:100%; }
+  #app { height:100dvh; }
+  input[type=range] { appearance:none; }
+  input[type=range]::-webkit-slider-thumb { width:16px;height:16px; }
+  input[type=range]::-moz-range-thumb { width:16px;height:16px;border:none;border-radius:50%;background:#2a6fff;cursor:pointer; }
+  #body { position:relative; }
+
+  /* mobile menu button — hidden on desktop */
+  #menuBtn {
+    display:none; align-items:center; gap:6px; margin-left:auto;
+    background:var(--border); color:var(--text);
+    border:1px solid var(--border); border-radius:4px;
+    font-family:'Share Tech Mono',monospace; font-size:.6rem; letter-spacing:.12em;
+    padding:6px 10px; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  #menuBtn .bars { display:inline-flex; flex-direction:column; gap:2px; }
+  #menuBtn .bars i { width:13px; height:2px; background:var(--text); border-radius:1px; }
+
   /* mobile backdrop behind drawer */
   #backdrop { display:none; position:absolute; inset:0; background:rgba(0,0,0,.5); z-index:1400; }
 
@@ -156,14 +162,12 @@
     #sidebar.open { transform:translateX(0); }
     #backdrop.show { display:block; }
 
-    /* roomier touch targets in the drawer */
     .lbl, .val { font-size:.78rem; }
     .tog-label { font-size:.8rem; }
     .leg { font-size:.72rem; }
     .sl-row label { font-size:.76rem; }
     .sec { font-size:.62rem; }
 
-    /* infobar scrolls horizontally so all metrics stay readable */
     #infobar { overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
     .ic { flex:0 0 auto; min-width:84px; }
 
@@ -171,7 +175,7 @@
   }
 </style>
 </head>
-<body id="artifacts-component-root-html">
+<body>
 <div id="app">
 
   <!-- HEADER -->
@@ -193,7 +197,7 @@
         <div class="sec">Incident</div>
         <div class="row"><span class="lbl">Chemical</span><span class="val">MMA C₅H₈O₂</span></div>
         <div class="row"><span class="lbl">Volume</span><span class="val w" id="s-vol">7,000 gal</span></div>
-        <div class="row"><span class="lbl">TNT equiv.</span><span class="val c" id="s-tnt">4.3 MT TNT</span></div>
+        <div class="row"><span class="lbl">TNT equiv.</span><span class="val c" id="s-tnt">—</span></div>
         <div class="row"><span class="lbl">Flash pt.</span><span class="val w">2°C / 36°F</span></div>
         <div class="row"><span class="lbl">Vapor density</span><span class="val w">&gt;1 (sinks)</span></div>
         <div class="row"><span class="lbl">IDLH</span><span class="val c">1,000 ppm</span></div>
@@ -260,13 +264,13 @@
 
       <div>
         <div class="sec">Distances</div>
-        <div class="row"><span class="lbl">Fireball</span><span class="val c" id="d-fb">43 ft</span></div>
-        <div class="row"><span class="lbl">Severe</span><span class="val w" id="d-sv">161 ft</span></div>
-        <div class="row"><span class="lbl">Moderate</span><span class="val w" id="d-md">428 ft</span></div>
-        <div class="row"><span class="lbl">Glass break</span><span class="val" id="d-gl">0.15 mi</span></div>
-        <div class="row"><span class="lbl">IDLH plume</span><span class="val c" id="d-id">0.92 mi</span></div>
-        <div class="row"><span class="lbl">ERPG-2</span><span class="val w" id="d-e2">4.05 mi</span></div>
-        <div class="row"><span class="lbl">ERPG-1</span><span class="val" id="d-e1">16.47 mi</span></div>
+        <div class="row"><span class="lbl">Fireball</span><span class="val c" id="d-fb">—</span></div>
+        <div class="row"><span class="lbl">Severe</span><span class="val w" id="d-sv">—</span></div>
+        <div class="row"><span class="lbl">Moderate</span><span class="val w" id="d-md">—</span></div>
+        <div class="row"><span class="lbl">Glass break</span><span class="val" id="d-gl">—</span></div>
+        <div class="row"><span class="lbl">IDLH plume</span><span class="val c" id="d-id">—</span></div>
+        <div class="row"><span class="lbl">ERPG-2</span><span class="val w" id="d-e2">—</span></div>
+        <div class="row"><span class="lbl">ERPG-1</span><span class="val" id="d-e1">—</span></div>
       </div>
 
     </div><!-- /sidebar -->
@@ -283,14 +287,14 @@
       </div>
 
       <div id="infobar">
-        <div class="ic"><div class="il">TNT EQUIV</div><div class="iv c" id="ib-tnt">4.3 MT</div></div>
-        <div class="ic"><div class="il">FIREBALL</div><div class="iv c" id="ib-fb">43 ft</div></div>
-        <div class="ic"><div class="il">SEVERE</div><div class="iv w" id="ib-sv">161 ft</div></div>
-        <div class="ic"><div class="il">MODERATE</div><div class="iv w" id="ib-md">428 ft</div></div>
-        <div class="ic"><div class="il">GLASS BREAK</div><div class="iv" id="ib-gl">0.15 mi</div></div>
-        <div class="ic"><div class="il">IDLH PLUME</div><div class="iv c" id="ib-id">0.92 mi</div></div>
-        <div class="ic"><div class="il">ERPG-2</div><div class="iv w" id="ib-e2">4.05 mi</div></div>
-        <div class="ic"><div class="il">ERPG-1</div><div class="iv" id="ib-e1">16.47 mi</div></div>
+        <div class="ic"><div class="il">TNT EQUIV</div><div class="iv c" id="ib-tnt">—</div></div>
+        <div class="ic"><div class="il">FIREBALL</div><div class="iv c" id="ib-fb">—</div></div>
+        <div class="ic"><div class="il">SEVERE</div><div class="iv w" id="ib-sv">—</div></div>
+        <div class="ic"><div class="il">MODERATE</div><div class="iv w" id="ib-md">—</div></div>
+        <div class="ic"><div class="il">GLASS BREAK</div><div class="iv" id="ib-gl">—</div></div>
+        <div class="ic"><div class="il">IDLH PLUME</div><div class="iv c" id="ib-id">—</div></div>
+        <div class="ic"><div class="il">ERPG-2</div><div class="iv w" id="ib-e2">—</div></div>
+        <div class="ic"><div class="il">ERPG-1</div><div class="iv" id="ib-e1">—</div></div>
       </div>
     </div>
 
@@ -585,6 +589,5 @@ setTimeout(() => { map.invalidateSize(); }, 100);
 window.addEventListener('resize', () => map.invalidateSize());
 window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 200));
 </script>
-
 </body>
 </html>
