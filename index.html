@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>GKN Aerospace — Hazard Zone Simulator</title>
+
+<!-- ── social / SEO ────────────────────────────────────────── -->
+<meta name="description" content="Interactive hazard-zone simulator: blast rings, Gaussian toxic plume, and evacuation order for a 34,000-gal MMA chemical tank emergency in Garden Grove, CA. Drag the sliders.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Hazard Zone Simulator">
+<meta property="og:title" content="GKN Aerospace — Hazard Zone Simulator">
+<meta property="og:description" content="Interactive blast-radius & toxic-plume model for a 34,000-gal MMA tank emergency in Garden Grove, CA. Drag the sliders.">
+<meta property="og:image" content="https://joevezzani.github.io/hazard-zone-sim/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://joevezzani.github.io/hazard-zone-sim/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="GKN Aerospace — Hazard Zone Simulator">
+<meta name="twitter:description" content="Interactive blast-radius & toxic-plume model. Drag the sliders.">
+<meta name="twitter:image" content="https://joevezzani.github.io/hazard-zone-sim/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%230a0c0f'/%3E%3Ccircle cx='50' cy='50' r='26' fill='%23ff2a2a'/%3E%3C/svg%3E">
+
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    --red:#ff2a2a; --orange:#ff7300; --yellow:#ffd000;
+    --bg:#0a0c0f; --panel:#111419; --border:#1e2430;
+    --text:#c8d4e8; --dim:#4a5568;
+  }
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+
+  html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; -webkit-text-size-adjust:100%; }
+
+  /* ── layout ── */
+  #app { display:flex; flex-direction:column; height:100vh; height:100dvh; }
+
+  #header {
+    flex:0 0 auto;
+    display:flex; align-items:center; gap:10px;
+    padding:7px 14px;
+    background:var(--panel); border-bottom:1px solid var(--border);
+    z-index:2000;
+  }
+  .alert-dot { width:9px;height:9px;border-radius:50%;background:var(--red);animation:blink 1.2s infinite;flex-shrink:0; }
+  @keyframes blink { 0%,100%{box-shadow:0 0 0 0 rgba(255,42,42,.6);} 50%{box-shadow:0 0 0 5px rgba(255,42,42,0);} }
+  #header h1 { font-family:'Bebas Neue',sans-serif; font-size:.95rem; letter-spacing:.1em; color:#fff; }
+  #header .sub { font-family:'Share Tech Mono',monospace; font-size:.58rem; color:var(--dim); margin-left:auto; }
+
+  /* mobile menu button — hidden on desktop */
+  #menuBtn {
+    display:none; align-items:center; gap:6px; margin-left:auto;
+    background:var(--border); color:var(--text);
+    border:1px solid var(--border); border-radius:4px;
+    font-family:'Share Tech Mono',monospace; font-size:.6rem; letter-spacing:.12em;
+    padding:6px 10px; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  #menuBtn .bars { display:inline-flex; flex-direction:column; gap:2px; }
+  #menuBtn .bars i { width:13px; height:2px; background:var(--text); border-radius:1px; }
+
+  #body { display:flex; flex:1 1 0; min-height:0; position:relative; }
+
+  /* ── sidebar ── */
+  #sidebar {
+    flex:0 0 218px; min-width:0;
+    background:var(--panel); border-right:1px solid var(--border);
+    overflow-y:auto; padding:9px; display:flex; flex-direction:column; gap:9px;
+    z-index:1500;
+  }
+  .sec { font-family:'Share Tech Mono',monospace; font-size:.57rem; letter-spacing:.14em; color:var(--dim);
+         text-transform:uppercase; border-bottom:1px solid var(--border); padding-bottom:3px; margin-bottom:4px; }
+  .row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px; }
+  .lbl { font-size:.67rem; color:var(--dim); }
+  .val { font-family:'Share Tech Mono',monospace; font-size:.68rem; color:var(--text); }
+  .val.w { color:var(--orange); } .val.c { color:var(--red); }
+
+  /* toggles */
+  .tog-row { display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:3px 0; user-select:none; }
+  .tog-label { display:flex; align-items:center; gap:5px; font-size:.69rem; }
+  .sw { width:30px;height:15px;background:var(--border);border-radius:8px;position:relative;transition:background .2s;flex-shrink:0; }
+  .sw.on { background:#2a6fff; }
+  .sw::after { content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;background:#fff;border-radius:50%;transition:left .2s; }
+  .sw.on::after { left:17px; }
+  .dot9 { width:9px;height:9px;border-radius:2px;flex-shrink:0; }
+
+  /* sliders */
+  .sl-row { margin-bottom:6px; }
+  .sl-row label { display:flex; justify-content:space-between; font-size:.67rem; color:var(--dim); margin-bottom:2px; }
+  .sl-row label span { font-family:'Share Tech Mono',monospace; color:var(--text); }
+  input[type=range] { width:100%;-webkit-appearance:none;appearance:none;height:3px;background:var(--border);border-radius:2px;outline:none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:#2a6fff;cursor:pointer; }
+  input[type=range]::-moz-range-thumb { width:16px;height:16px;border:none;border-radius:50%;background:#2a6fff;cursor:pointer; }
+
+  /* legend */
+  .leg { display:flex;align-items:center;gap:5px;font-size:.64rem;margin-bottom:3px;line-height:1.3; }
+  .leg-sw { width:20px;height:7px;border-radius:2px;opacity:.75;flex-shrink:0; }
+
+  /* ── map wrapper ── */
+  #mapwrap { position:relative; flex:1 1 0; min-width:0; min-height:0; }
+  #map { position:absolute; inset:0 0 36px 0; }   /* leave room for infobar */
+
+  /* Leaflet dark tiles */
+  .leaflet-tile-pane { filter:brightness(.82) saturate(.65) hue-rotate(185deg) invert(1); }
+  .leaflet-container { background:#0e1117 !important; }
+  /* when basemap off, remove filter so overlays look right */
+  .tiles-off .leaflet-tile-pane { display:none; }
+
+  /* ── info bar ── */
+  #infobar {
+    position:absolute; bottom:0; left:0; right:0; height:36px;
+    background:rgba(10,12,15,.93); border-top:1px solid var(--border);
+    display:flex; font-family:'Share Tech Mono',monospace; font-size:.58rem;
+    z-index:1200; pointer-events:none;
+  }
+  .ic { flex:1; padding:4px 7px; border-right:1px solid var(--border); line-height:1.4; }
+  .ic:last-child { border-right:none; }
+  .ic .il { color:var(--dim); }
+  .ic .iv { color:var(--text); }
+  .ic .iv.w { color:var(--orange); }
+  .ic .iv.c { color:var(--red); }
+
+  /* wind badge */
+  #windbadge {
+    position:absolute; top:9px; right:9px;
+    background:rgba(10,12,15,.88); border:1px solid var(--border); border-radius:5px;
+    padding:6px 9px; font-family:'Share Tech Mono',monospace; font-size:.6rem;
+    line-height:1.65; z-index:1200; pointer-events:none;
+  }
+  #windbadge .wv { color:var(--yellow); }
+
+  /* popup */
+  .leaflet-popup-content-wrapper { background:rgba(10,12,15,.95)!important; border:1px solid var(--border)!important; border-radius:4px!important; color:var(--text)!important; font-family:'Share Tech Mono',monospace!important; font-size:.68rem!important; box-shadow:none!important; }
+  .leaflet-popup-tip { background:rgba(10,12,15,.95)!important; }
+
+  ::-webkit-scrollbar{width:3px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+  /* mobile backdrop behind drawer */
+  #backdrop { display:none; position:absolute; inset:0; background:rgba(0,0,0,.5); z-index:1400; }
+
+  /* ── responsive ── */
+  @media (max-width:768px) {
+    #header { gap:8px; padding:8px 12px; }
+    #header h1 { font-size:.82rem; }
+    #header .sub { display:none; }
+    #menuBtn { display:flex; }
+
+    #sidebar {
+      position:absolute; top:0; left:0; bottom:0;
+      flex-basis:248px; max-width:84vw;
+      transform:translateX(-100%); transition:transform .25s ease;
+      box-shadow:3px 0 22px rgba(0,0,0,.65);
+      gap:11px; padding:11px;
+    }
+    #sidebar.open { transform:translateX(0); }
+    #backdrop.show { display:block; }
+
+    /* roomier touch targets in the drawer */
+    .lbl, .val { font-size:.78rem; }
+    .tog-label { font-size:.8rem; }
+    .leg { font-size:.72rem; }
+    .sl-row label { font-size:.76rem; }
+    .sec { font-size:.62rem; }
+
+    /* infobar scrolls horizontally so all metrics stay readable */
+    #infobar { overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
+    .ic { flex:0 0 auto; min-width:84px; }
+
+    #windbadge { top:8px; right:8px; font-size:.56rem; padding:5px 8px; }
+  }
+</style>
+</head>
+<body id="artifacts-component-root-html">
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div class="alert-dot"></div>
+    <h1>GKN AEROSPACE — HAZARD ZONE SIMULATOR</h1>
+    <div class="sub">12122 WESTERN AVE, GARDEN GROVE CA &nbsp;|&nbsp; MMA TANK EMERGENCY &nbsp;|&nbsp; MAY 23 2026</div>
+    <button id="menuBtn" onclick="toggleMenu()" aria-label="Toggle controls"><span class="bars"><i></i><i></i><i></i></span> DATA</button>
+  </div>
+
+  <div id="body">
+
+    <div id="backdrop" onclick="toggleMenu()"></div>
+
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+
+      <div>
+        <div class="sec">Incident</div>
+        <div class="row"><span class="lbl">Chemical</span><span class="val">MMA C₅H₈O₂</span></div>
+        <div class="row"><span class="lbl">Volume</span><span class="val w" id="s-vol">7,000 gal</span></div>
+        <div class="row"><span class="lbl">TNT equiv.</span><span class="val c" id="s-tnt">4.3 MT TNT</span></div>
+        <div class="row"><span class="lbl">Flash pt.</span><span class="val w">2°C / 36°F</span></div>
+        <div class="row"><span class="lbl">Vapor density</span><span class="val w">&gt;1 (sinks)</span></div>
+        <div class="row"><span class="lbl">IDLH</span><span class="val c">1,000 ppm</span></div>
+      </div>
+
+      <div>
+        <div class="sec">Wind (Live)</div>
+        <div class="row"><span class="lbl">From</span><span class="val">West 270°</span></div>
+        <div class="row"><span class="lbl">Speed</span><span class="val" id="s-wspd">8 mph</span></div>
+        <div class="row"><span class="lbl">Gusts</span><span class="val w">up to 20 mph</span></div>
+        <div class="row"><span class="lbl">Plume to</span><span class="val c">NE → Anaheim</span></div>
+      </div>
+
+      <div>
+        <div class="sec">Layers</div>
+        <div class="tog-row" onclick="tog('basemap')">
+          <span class="tog-label"><span class="dot9" style="background:#4a90d9"></span>Base map</span>
+          <div class="sw on" id="sw-basemap"></div>
+        </div>
+        <div class="tog-row" onclick="tog('blast')">
+          <span class="tog-label"><span class="dot9" style="background:#ff2a2a"></span>Blast zones</span>
+          <div class="sw on" id="sw-blast"></div>
+        </div>
+        <div class="tog-row" onclick="tog('plume')">
+          <span class="tog-label"><span class="dot9" style="background:#ff7300"></span>Toxic plume</span>
+          <div class="sw on" id="sw-plume"></div>
+        </div>
+        <div class="tog-row" onclick="tog('evac')">
+          <span class="tog-label"><span class="dot9" style="background:#ffd000"></span>Evac order</span>
+          <div class="sw on" id="sw-evac"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec">Scenario</div>
+        <div class="sl-row">
+          <label>VCE efficiency <span id="lbl-eff">3%</span></label>
+          <input type="range" min="1" max="10" value="3" id="sl-eff" oninput="onSlide()">
+        </div>
+        <div class="sl-row">
+          <label>Wind speed (mph) <span id="lbl-wind">8</span></label>
+          <input type="range" min="2" max="20" value="8" id="sl-wind" oninput="onSlide()">
+        </div>
+        <div class="sl-row">
+          <label>Volume (gal) <span id="lbl-vol">7,000</span></label>
+          <input type="range" min="1000" max="34000" value="7000" id="sl-vol" oninput="onSlide()">
+        </div>
+      </div>
+
+      <div>
+        <div class="sec">Blast legend</div>
+        <div class="leg"><div class="leg-sw" style="background:#ff2a2a"></div>Fireball / total destruction</div>
+        <div class="leg"><div class="leg-sw" style="background:#ff5500"></div>Severe structural damage</div>
+        <div class="leg"><div class="leg-sw" style="background:#ff8800"></div>Moderate damage / injury</div>
+        <div class="leg"><div class="leg-sw" style="background:#ffcc00"></div>Glass break / eardrum</div>
+      </div>
+
+      <div>
+        <div class="sec">Plume legend (NE)</div>
+        <div class="leg"><div class="leg-sw" style="background:#ff2a2a"></div>IDLH &gt;1,000 ppm — lethal</div>
+        <div class="leg"><div class="leg-sw" style="background:#ff7300"></div>ERPG-2 75 ppm — serious</div>
+        <div class="leg"><div class="leg-sw" style="background:#ffd000"></div>ERPG-1 10 ppm — irritation</div>
+      </div>
+
+      <div>
+        <div class="sec">Distances</div>
+        <div class="row"><span class="lbl">Fireball</span><span class="val c" id="d-fb">43 ft</span></div>
+        <div class="row"><span class="lbl">Severe</span><span class="val w" id="d-sv">161 ft</span></div>
+        <div class="row"><span class="lbl">Moderate</span><span class="val w" id="d-md">428 ft</span></div>
+        <div class="row"><span class="lbl">Glass break</span><span class="val" id="d-gl">0.15 mi</span></div>
+        <div class="row"><span class="lbl">IDLH plume</span><span class="val c" id="d-id">0.92 mi</span></div>
+        <div class="row"><span class="lbl">ERPG-2</span><span class="val w" id="d-e2">4.05 mi</span></div>
+        <div class="row"><span class="lbl">ERPG-1</span><span class="val" id="d-e1">16.47 mi</span></div>
+      </div>
+
+    </div><!-- /sidebar -->
+
+    <!-- MAP AREA -->
+    <div id="mapwrap">
+      <div id="map"></div>
+
+      <div id="windbadge">
+        WIND <span class="wv">W → NE</span><br>
+        SPEED <span class="wv" id="wb-spd">8 mph</span><br>
+        GUSTS <span class="wv">20 mph</span><br>
+        STABILITY <span class="wv">Pasquill D</span>
+      </div>
+
+      <div id="infobar">
+        <div class="ic"><div class="il">TNT EQUIV</div><div class="iv c" id="ib-tnt">4.3 MT</div></div>
+        <div class="ic"><div class="il">FIREBALL</div><div class="iv c" id="ib-fb">43 ft</div></div>
+        <div class="ic"><div class="il">SEVERE</div><div class="iv w" id="ib-sv">161 ft</div></div>
+        <div class="ic"><div class="il">MODERATE</div><div class="iv w" id="ib-md">428 ft</div></div>
+        <div class="ic"><div class="il">GLASS BREAK</div><div class="iv" id="ib-gl">0.15 mi</div></div>
+        <div class="ic"><div class="il">IDLH PLUME</div><div class="iv c" id="ib-id">0.92 mi</div></div>
+        <div class="ic"><div class="il">ERPG-2</div><div class="iv w" id="ib-e2">4.05 mi</div></div>
+        <div class="ic"><div class="il">ERPG-1</div><div class="iv" id="ib-e1">16.47 mi</div></div>
+      </div>
+    </div>
+
+  </div><!-- /body -->
+</div><!-- /app -->
+
+<script>
+// ── constants ──────────────────────────────────────────────
+const GKN = [33.7739, -117.9410];
+const WIND_BEARING = 45; // degrees from north, NE
+
+// ── Leaflet map ────────────────────────────────────────────
+const map = L.map('map', {
+  center: GKN, zoom: 13,
+  zoomControl: true,
+  attributionControl: true,
+});
+
+const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors',
+  maxZoom: 19,
+}).addTo(map);
+
+// GKN marker
+const gknIcon = L.divIcon({
+  className:'',
+  html:`<div style="
+    width:14px;height:14px;border-radius:50%;
+    border:2px solid #ff2a2a;background:rgba(255,42,42,.35);
+    box-shadow:0 0 10px #ff2a2a;
+  "></div>`,
+  iconSize:[14,14], iconAnchor:[7,7],
+});
+L.marker(GKN, {icon:gknIcon, zIndexOffset:1000})
+ .addTo(map)
+ .bindPopup(`<b style="color:#ff5555">GKN AEROSPACE</b><br>12122 Western Ave, Garden Grove<br><span style="color:#ff9900">34,000-gal MMA tank — IN CRISIS</span>`)
+ .openPopup();
+
+// ── layer groups ───────────────────────────────────────────
+const blastGrp = L.layerGroup().addTo(map);
+const plumeGrp = L.layerGroup().addTo(map);
+const evacGrp  = L.layerGroup().addTo(map);
+
+// ── layer state ────────────────────────────────────────────
+const state = { basemap:true, blast:true, plume:true, evac:true };
+
+function tog(name) {
+  state[name] = !state[name];
+  document.getElementById('sw-'+name).classList.toggle('on', state[name]);
+  if (name === 'basemap') {
+    // toggle tile visibility via CSS class on container
+    map.getContainer().classList.toggle('tiles-off', !state[name]);
+    return;
+  }
+  const grp = name==='blast' ? blastGrp : name==='plume' ? plumeGrp : evacGrp;
+  if (state[name]) map.addLayer(grp); else map.removeLayer(grp);
+}
+
+// ── geodesic dest point ────────────────────────────────────
+// bearing: degrees from north clockwise; dist: metres
+function destPt(lat, lng, bearing, dist) {
+  const R = 6371000;
+  const b = bearing * Math.PI / 180;
+  const φ1 = lat * Math.PI / 180;
+  const λ1 = lng * Math.PI / 180;
+  const φ2 = Math.asin(Math.sin(φ1)*Math.cos(dist/R) +
+                        Math.cos(φ1)*Math.sin(dist/R)*Math.cos(b));
+  const λ2 = λ1 + Math.atan2(Math.sin(b)*Math.sin(dist/R)*Math.cos(φ1),
+                               Math.cos(dist/R) - Math.sin(φ1)*Math.sin(φ2));
+  return [φ2*180/Math.PI, λ2*180/Math.PI];
+}
+
+// ── plume polygon ──────────────────────────────────────────
+// Builds a fan-shaped polygon with Gaussian-inspired widening.
+// The cone starts at the source, widens proportionally downwind.
+function buildPlumePoly(lengthM, halfAngleDeg) {
+  const pts = [];
+  const N = 40;
+  // left edge (source → tip, sweeping left side)
+  for (let i = 0; i <= N; i++) {
+    const frac = i / N;
+    const d = frac * lengthM;
+    const spread = halfAngleDeg * frac;                   // widens with distance
+    pts.push(destPt(GKN[0], GKN[1], WIND_BEARING - spread, Math.max(d, 1)));
+  }
+  // right edge (tip → source)
+  for (let i = N; i >= 0; i--) {
+    const frac = i / N;
+    const d = frac * lengthM;
+    const spread = halfAngleDeg * frac;
+    pts.push(destPt(GKN[0], GKN[1], WIND_BEARING + spread, Math.max(d, 1)));
+  }
+  return pts;
+}
+
+// ── physics ────────────────────────────────────────────────
+function calcBlast(volGal, effPct) {
+  const massKg  = volGal * 3.785 * 0.94;        // density 0.94 kg/L
+  const tntKg   = massKg * 26.7 * (effPct/100) / 4.6;
+  const s       = Math.pow(tntKg, 1/3);
+  return {
+    fireball: 0.8  * s,   // metres
+    severe:   3.0  * s,
+    moderate: 8.0  * s,
+    glass:    15.0 * s,
+    tntMT: tntKg / 1000,
+  };
+}
+
+function calcPlume(volGal, windMph) {
+  const Q_kg = volGal * 3.785 * 0.94 * 0.25;   // 25% flash fraction
+  const u    = windMph * 0.44704;               // m/s
+
+  // Gaussian ground-level centreline conc (Pasquill D)
+  function C(x) {
+    const sy = 0.22 * x * Math.pow(1 + 0.0001*x, -0.5);
+    const sz = 0.16 * x * Math.pow(1 + 0.0001*x, -0.5);
+    if (sy < 0.1 || sz < 0.1) return 1e12;
+    return (Q_kg * 1000) / (2 * Math.PI * sy * sz * u); // g/m³
+  }
+
+  // Binary search for downwind distance at concentration threshold
+  function findX(gm3) {
+    let lo = 5, hi = 100000;
+    for (let i = 0; i < 60; i++) {
+      const mid = (lo+hi)/2;
+      C(mid) > gm3 ? lo = mid : hi = mid;
+    }
+    return lo;
+  }
+
+  // MMA MW=100 → ppm-to-g/m³: ppm * 100/24450
+  return {
+    idlh:  findX(1000 * 100/24450),
+    erpg2: findX(75   * 100/24450),
+    erpg1: findX(10   * 100/24450),
+  };
+}
+
+// ── draw ───────────────────────────────────────────────────
+function drawBlast(b) {
+  blastGrp.clearLayers();
+  [
+    { r:b.glass,    col:'#ffcc00', op:.07, lbl:'Glass break / Eardrum' },
+    { r:b.moderate, col:'#ff8800', op:.14, lbl:'Moderate damage' },
+    { r:b.severe,   col:'#ff5500', op:.25, lbl:'Severe structural' },
+    { r:b.fireball, col:'#ff2a2a', op:.45, lbl:'Fireball' },
+  ].forEach(z => {
+    L.circle(GKN, {
+      radius:z.r, color:z.col, weight:1.2, opacity:.7,
+      fillColor:z.col, fillOpacity:z.op, dashArray:'4 4',
+    })
+    .bindTooltip(`<b style="color:${z.col}">${z.lbl}</b><br>r = ${ftStr(z.r)} / ${miStr(z.r)}`, {sticky:true})
+    .addTo(blastGrp);
+  });
+}
+
+function drawPlume(p) {
+  plumeGrp.clearLayers();
+  [
+    { dist:p.erpg1, ang:22, col:'#ffd000', op:.13, lbl:'ERPG-1  10 ppm' },
+    { dist:p.erpg2, ang:17, col:'#ff7300', op:.22, lbl:'ERPG-2  75 ppm' },
+    { dist:p.idlh,  ang:12, col:'#ff2a2a', op:.40, lbl:'IDLH 1,000 ppm' },
+  ].forEach(z => {
+    const pts = buildPlumePoly(z.dist, z.ang);
+    L.polygon(pts, {
+      color:z.col, weight:1.2, opacity:.65,
+      fillColor:z.col, fillOpacity:z.op,
+    })
+    .bindTooltip(`<b style="color:${z.col}">${z.lbl}</b><br>${miStr(z.dist)} downwind`, {sticky:true})
+    .addTo(plumeGrp);
+
+    // tip label
+    const tip = destPt(GKN[0], GKN[1], WIND_BEARING, z.dist);
+    L.marker(tip, {
+      icon: L.divIcon({
+        className:'',
+        html:`<div style="
+          font-family:'Share Tech Mono',monospace;font-size:9px;
+          color:${z.col};background:rgba(10,12,15,.82);
+          padding:2px 4px;border:1px solid ${z.col}55;border-radius:3px;
+          white-space:nowrap;pointer-events:none;
+        ">${z.lbl} · ${miStr(z.dist)}</div>`,
+        iconAnchor:[0,0],
+      }),
+      interactive:false,
+    }).addTo(plumeGrp);
+  });
+
+  // wind arrows along centreline
+  for (let d = 400; d < p.erpg2; d += 700) {
+    const pt = destPt(GKN[0], GKN[1], WIND_BEARING, d);
+    L.marker(pt, {
+      icon: L.divIcon({
+        className:'',
+        html:`<div style="color:rgba(200,212,232,.45);font-size:13px;transform:rotate(${WIND_BEARING}deg);line-height:1;">➤</div>`,
+        iconSize:[14,14], iconAnchor:[7,7],
+      }),
+      interactive:false,
+    }).addTo(plumeGrp);
+  }
+}
+
+function drawEvac() {
+  evacGrp.clearLayers();
+  // Actual order: N of GG Blvd (~33.778), S of Orangewood (~33.785),
+  //               E of Monarch (~-117.940), W of Beach Blvd (~-117.994)
+  const bounds = [
+    [33.7855, -117.9940],
+    [33.7855, -117.9180],
+    [33.7780, -117.9180],
+    [33.7780, -117.9940],
+  ];
+  L.polygon(bounds, {
+    color:'#ffd000', weight:2, opacity:.7,
+    fillColor:'#ffd000', fillOpacity:.04, dashArray:'6 4',
+  })
+  .bindTooltip('<b style="color:#ffd000">EVACUATION ORDER</b><br>~40,000 residents', {sticky:true})
+  .addTo(evacGrp);
+
+  L.marker([33.7857, -117.958], {
+    icon: L.divIcon({
+      className:'',
+      html:`<div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,208,0,.85);background:rgba(10,12,15,.7);padding:2px 5px;border-radius:2px;white-space:nowrap;">EVACUATION ORDER (~40,000 residents)</div>`,
+      iconAnchor:[0,0],
+    }),
+    interactive:false,
+  }).addTo(evacGrp);
+}
+
+// ── formatting helpers ─────────────────────────────────────
+function ftStr(m) { return Math.round(m*3.281).toLocaleString()+' ft'; }
+function miStr(m) { return (m/1609).toFixed(2)+' mi'; }
+
+// ── update UI ──────────────────────────────────────────────
+function updateUI(b, p) {
+  // sidebar stats
+  document.getElementById('s-tnt').textContent = b.tntMT.toFixed(1)+' MT TNT';
+  document.getElementById('d-fb').textContent  = ftStr(b.fireball);
+  document.getElementById('d-sv').textContent  = ftStr(b.severe);
+  document.getElementById('d-md').textContent  = ftStr(b.moderate);
+  document.getElementById('d-gl').textContent  = miStr(b.glass);
+  document.getElementById('d-id').textContent  = miStr(p.idlh);
+  document.getElementById('d-e2').textContent  = miStr(p.erpg2);
+  document.getElementById('d-e1').textContent  = miStr(p.erpg1);
+  // infobar
+  document.getElementById('ib-tnt').textContent = b.tntMT.toFixed(1)+' MT';
+  document.getElementById('ib-fb').textContent  = ftStr(b.fireball);
+  document.getElementById('ib-sv').textContent  = ftStr(b.severe);
+  document.getElementById('ib-md').textContent  = ftStr(b.moderate);
+  document.getElementById('ib-gl').textContent  = miStr(b.glass);
+  document.getElementById('ib-id').textContent  = miStr(p.idlh);
+  document.getElementById('ib-e2').textContent  = miStr(p.erpg2);
+  document.getElementById('ib-e1').textContent  = miStr(p.erpg1);
+}
+
+// ── main sim update ────────────────────────────────────────
+function onSlide() {
+  const eff  = +document.getElementById('sl-eff').value;
+  const wind = +document.getElementById('sl-wind').value;
+  const vol  = +document.getElementById('sl-vol').value;
+
+  document.getElementById('lbl-eff').textContent  = eff+'%';
+  document.getElementById('lbl-wind').textContent = wind;
+  document.getElementById('lbl-vol').textContent  = Math.round(vol).toLocaleString();
+  document.getElementById('s-vol').textContent    = Math.round(vol).toLocaleString()+' gal';
+  document.getElementById('s-wspd').textContent   = wind+' mph';
+  document.getElementById('wb-spd').textContent   = wind+' mph';
+
+  const b = calcBlast(vol, eff);
+  const p = calcPlume(vol, wind);
+
+  updateUI(b, p);
+  if (state.blast) drawBlast(b); else blastGrp.clearLayers();
+  if (state.plume) drawPlume(p); else plumeGrp.clearLayers();
+  if (state.evac)  drawEvac();   else evacGrp.clearLayers();
+}
+
+// ── mobile drawer ──────────────────────────────────────────
+function toggleMenu() {
+  const sb = document.getElementById('sidebar');
+  const bd = document.getElementById('backdrop');
+  const open = sb.classList.toggle('open');
+  bd.classList.toggle('show', open);
+}
+
+// ── init ───────────────────────────────────────────────────
+onSlide();
+
+// Force Leaflet to recalculate size after layout settles
+setTimeout(() => { map.invalidateSize(); }, 100);
+window.addEventListener('resize', () => map.invalidateSize());
+window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 200));
+</script>
+
+</body>
+</html>
