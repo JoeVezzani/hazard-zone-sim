@@ -285,6 +285,28 @@
       </div>
 
       <div>
+        <div class="sec">Cascade Failure</div>
+        <div style="font-size:.62rem;color:var(--dim);margin-bottom:6px;line-height:1.4;">
+          Officials say the tank sits beside <b>2 other storage tanks</b>. A blast can trigger
+          sympathetic detonation. Toggle the neighbours (worst case: 34,000 gal each, full).
+          Cascade grows the <b>blast</b> (combined fuel detonates); the toxic plume stays the
+          primary tank's leak.
+        </div>
+        <div class="tog-row" onclick="tog('t2')">
+          <span class="tog-label"><span class="dot9" style="background:#ff5500"></span>Tank 2 (+34,000 gal)</span>
+          <div class="sw" id="sw-t2"></div>
+        </div>
+        <div class="tog-row" onclick="tog('t3')">
+          <span class="tog-label"><span class="dot9" style="background:#ff5500"></span>Tank 3 (+34,000 gal)</span>
+          <div class="sw" id="sw-t3"></div>
+        </div>
+        <div class="row" style="margin-top:5px;"><span class="lbl">Total volume</span><span class="val c" id="s-totalvol">7,000 gal</span></div>
+        <div class="row"><span class="lbl">Scenario</span><span class="val c" id="s-scenario">Single tank</span></div>
+        <div class="row"><span class="lbl">Blast scale</span><span class="val c" id="s-scale">—</span></div>
+        <div style="font-size:.57rem;color:var(--dim);margin-top:4px;line-height:1.35;">TNT-equivalent = blast energy only (not radiation/fallout).</div>
+      </div>
+
+      <div>
         <div class="sec">Blast legend</div>
         <div class="leg"><div class="leg-sw" style="background:#ff2a2a"></div>Fireball / total destruction</div>
         <div class="leg"><div class="leg-sw" style="background:#ff5500"></div>Severe structural damage</div>
@@ -397,7 +419,7 @@ const plumeGrp = L.layerGroup().addTo(map);
 const evacGrp  = L.layerGroup().addTo(map);
 
 // ── layer state ────────────────────────────────────────────
-const state = { basemap:true, blast:true, plume:true, evac:true };
+const state = { basemap:true, blast:true, plume:true, evac:true, t2:false, t3:false };
 
 function tog(name) {
   state[name] = !state[name];
@@ -407,6 +429,7 @@ function tog(name) {
     map.getContainer().classList.toggle('tiles-off', !state[name]);
     return;
   }
+  if (name === 't2' || name === 't3') { onSlide(); return; }   // cascade tanks → recompute blast
   const grp = name==='blast' ? blastGrp : name==='plume' ? plumeGrp : evacGrp;
   if (state[name]) map.addLayer(grp); else map.removeLayer(grp);
 }
@@ -606,6 +629,16 @@ function drawEvac() {
 // ── formatting helpers ─────────────────────────────────────
 function ftStr(m) { return Math.round(m*3.281).toLocaleString()+' ft'; }
 function miStr(m) { return (m/1609).toFixed(2)+' mi'; }
+// Blast-energy scale reference (tonnes TNT). Refs: MOAB 11 t, Davy Crockett
+// (smallest tactical nuke) 20 t, B54 SADM 100–200 t (0.1–0.2 kt), Hiroshima 15 kt.
+function tntScale(t) {
+  if (t < 1)    return 'truck-bomb scale';
+  if (t < 11)   return 'large truck bomb';
+  if (t < 20)   return 'beyond MOAB (11 t)';
+  if (t < 100)  return '≈ smallest tactical nuke (Davy Crockett, 20 t)';
+  if (t < 1000) return '≈ small tactical nuke (0.1–0.2 kt)';
+  return (t/1000).toFixed(1) + ' kt — tactical-nuke class';
+}
 
 // ── update UI ──────────────────────────────────────────────
 function updateUI(b, p) {
@@ -642,10 +675,21 @@ function onSlide() {
   document.getElementById('s-wspd').textContent   = wind+' mph';
   document.getElementById('wb-spd').textContent   = wind+' mph';
 
-  const b = calcBlast(vol, eff);
+  // Cascade: each adjacent tank adds 34,000 gal (worst case, full) to the blast.
+  // Cascade: each adjacent tank adds 34,000 gal (worst case, full) of FUEL to the
+  // blast. A sympathetic detonation combusts the MMA, so it drives a much larger
+  // BLAST — not a proportionally larger toxic cloud. The plume therefore stays the
+  // primary tank's leak/spill release (the alternative, non-detonation outcome).
+  const nTanks = 1 + (state.t2 ? 1 : 0) + (state.t3 ? 1 : 0);
+  const totalVol = vol + (state.t2 ? 34000 : 0) + (state.t3 ? 34000 : 0);
+  const b = calcBlast(totalVol, eff);
   const p = calcPlume(vol, wind);
+  document.getElementById('s-scenario').textContent = nTanks === 1 ? 'Single tank' : `CASCADE — ${nTanks} tanks`;
+  document.getElementById('s-totalvol').textContent = Math.round(totalVol).toLocaleString()+' gal';
+  document.getElementById('s-scale').textContent = tntScale(b.tntMT);
 
   updateUI(b, p);
+  if (nTanks > 1) document.getElementById('s-tnt').textContent += ' ⚠';
   if (state.blast) drawBlast(b); else blastGrp.clearLayers();
   if (state.plume) drawPlume(p); else plumeGrp.clearLayers();
   if (state.evac)  drawEvac();   else evacGrp.clearLayers();
