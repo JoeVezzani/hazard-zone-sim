@@ -293,7 +293,7 @@
       </div>
 
       <div>
-        <div class="sec">Plume legend (NE)</div>
+        <div class="sec">Plume legend (modeled)</div>
         <div class="leg"><div class="leg-sw" style="background:#ff2a2a"></div>IDLH &gt;1,000 ppm — lethal</div>
         <div class="leg"><div class="leg-sw" style="background:#ff7300"></div>ERPG-2 75 ppm — serious</div>
         <div class="leg"><div class="leg-sw" style="background:#ffd000"></div>ERPG-1 10 ppm — irritation</div>
@@ -308,6 +308,12 @@
         <div class="row"><span class="lbl">IDLH plume</span><span class="val c" id="d-id">—</span></div>
         <div class="row"><span class="lbl">ERPG-2</span><span class="val w" id="d-e2">—</span></div>
         <div class="row"><span class="lbl">ERPG-1</span><span class="val" id="d-e1">—</span></div>
+      </div>
+
+      <div>
+        <div class="sec">What's real vs modeled</div>
+        <div class="leg"><div class="leg-sw" style="background:#ffd000"></div><b>Real:</b>&nbsp;site location + the official OCFA evacuation order (yellow box).</div>
+        <div class="leg"><div class="leg-sw" style="background:#ff7300"></div><b>Modeled:</b>&nbsp;blast rings + toxic plume (heavier-than-air, current wind). Illustrative estimate — not official guidance.</div>
       </div>
 
     </div><!-- /sidebar -->
@@ -352,9 +358,10 @@
 
 <script>
 // ── constants ──────────────────────────────────────────────
-// GKN Aerospace, 12122 Western Ave, Garden Grove CA 92841 — verified rooftop coords
-// (site of the real May 2026 methyl methacrylate tank emergency).
-const GKN = [33.78661, -118.00140];
+// GKN Aerospace, 12122 Western Ave, Garden Grove CA 92841 — the actual plant
+// building (east of Western Ave, just N of Anaconda Ave, W of Roselle storm
+// channel); site of the real May 2026 methyl methacrylate tank emergency.
+const GKN = [33.7840, -117.9997];
 let WIND_BEARING = 45;       // plume travel bearing (deg from N). Updated live from real wind.
 let liveWindSeeded = false;  // seed the speed slider from observed wind once
 
@@ -429,14 +436,14 @@ function buildPlumePoly(lengthM, halfAngleDeg) {
   for (let i = 0; i <= N; i++) {
     const frac = i / N;
     const d = frac * lengthM;
-    const spread = halfAngleDeg * frac;                   // widens with distance
+    const spread = halfAngleDeg * (0.25 + 0.75*frac);                   // widens with distance
     pts.push(destPt(GKN[0], GKN[1], WIND_BEARING - spread, Math.max(d, 1)));
   }
   // right edge (tip → source)
   for (let i = N; i >= 0; i--) {
     const frac = i / N;
     const d = frac * lengthM;
-    const spread = halfAngleDeg * frac;
+    const spread = halfAngleDeg * (0.25 + 0.75*frac);
     pts.push(destPt(GKN[0], GKN[1], WIND_BEARING + spread, Math.max(d, 1)));
   }
   return pts;
@@ -460,12 +467,20 @@ function calcPlume(volGal, windMph) {
   const Q_kg = volGal * 3.785 * 0.94 * 0.25;   // 25% flash fraction
   const u    = windMph * 0.44704;               // m/s
 
-  // Gaussian ground-level centreline conc (Pasquill D)
+  // Dense-gas (heavier-than-air) ground-level centreline conc.
+  // MMA vapour is ~3.4x as dense as air, so the cloud slumps sideways under
+  // gravity and resists vertical mixing — it hugs the ground and holds high
+  // concentrations far further downwind than a neutral plume. This is a
+  // simplified dense-gas correction on the Pasquill-D coefficients; the full
+  // Britter-McQuaid model is the v3 plan.
   function C(x) {
-    const sy = 0.22 * x * Math.pow(1 + 0.0001*x, -0.5);
-    const sz = 0.16 * x * Math.pow(1 + 0.0001*x, -0.5);
+    const syP   = 0.22 * x * Math.pow(1 + 0.0001*x, -0.5);  // passive lateral
+    const szP   = 0.16 * x * Math.pow(1 + 0.0001*x, -0.5);  // passive vertical
+    const slump = 35 * (1 - Math.exp(-x/300));              // gravity slumping (m)
+    const sy = Math.sqrt(syP*syP + slump*slump);            // wider, esp. near source
+    const sz = 0.45 * szP + 1.2;                            // suppressed vertical mixing
     if (sy < 0.1 || sz < 0.1) return 1e12;
-    return (Q_kg * 1000) / (2 * Math.PI * sy * sz * u); // g/m³
+    return (Q_kg * 1000) / (2 * Math.PI * sy * sz * u);     // g/m³
   }
 
   // Binary search for downwind distance at concentration threshold
@@ -506,6 +521,16 @@ function drawBlast(b) {
 
 function drawPlume(p) {
   plumeGrp.clearLayers();
+
+  // Dense-gas near-source pool: heavier-than-air vapour slumps outward in ALL
+  // directions and pools near the tank before drifting downwind — lethal close
+  // in regardless of wind. Drawn first so the downwind cones layer on top.
+  const slumpR = Math.min(p.idlh * 0.55, 280);
+  L.circle(GKN, { radius:slumpR, color:'#ff2a2a', weight:1, opacity:.5,
+    fillColor:'#ff2a2a', fillOpacity:.30, dashArray:'2 3' })
+   .bindTooltip('<b style="color:#ff5555">Dense-gas pool</b><br>heavier-than-air vapour slumps outward (all directions) near the source', {sticky:true})
+   .addTo(plumeGrp);
+
   [
     { dist:p.erpg1, ang:22, col:'#ffd000', op:.13, lbl:'ERPG-1  10 ppm' },
     { dist:p.erpg2, ang:17, col:'#ff7300', op:.22, lbl:'ERPG-2  75 ppm' },
@@ -516,7 +541,7 @@ function drawPlume(p) {
       color:z.col, weight:1.2, opacity:.65,
       fillColor:z.col, fillOpacity:z.op,
     })
-    .bindTooltip(`<b style="color:${z.col}">${z.lbl}</b><br>${miStr(z.dist)} downwind`, {sticky:true})
+    .bindTooltip(`<b style="color:${z.col}">${z.lbl}</b><br>modeled · ${miStr(z.dist)} downwind (current wind)`, {sticky:true})
     .addTo(plumeGrp);
 
     // tip label
@@ -550,24 +575,28 @@ function drawPlume(p) {
   }
 }
 
-function drawEvac(p) {
+function drawEvac() {
   evacGrp.clearLayers();
-  // Downwind evacuation sector — a wedge along the live wind bearing, wider than
-  // the toxic plume to absorb wind variability, extending out past the ERPG-2 zone.
-  const len = Math.max((p ? p.erpg2 : 6500), 2400);
-  const pts = buildPlumePoly(len, 32);   // 32° half-angle wedge, rotates with WIND_BEARING
-  L.polygon(pts, {
-    color:'#ffd000', weight:2, opacity:.7,
+  // The REAL order issued by Orange County Fire Authority — north of Garden Grove
+  // Blvd, east of Monarch St, south of Orangewood Ave, west of Beach Blvd
+  // (~40,000 residents). Authoritative: fixed, does not move with the model.
+  const box = [
+    [33.7958, -118.0068],   // NW  Orangewood × Monarch
+    [33.7958, -117.9928],   // NE  Orangewood × Beach
+    [33.7744, -117.9928],   // SE  Garden Grove Blvd × Beach
+    [33.7744, -118.0068],   // SW  Garden Grove Blvd × Monarch
+  ];
+  L.polygon(box, {
+    color:'#ffd000', weight:2, opacity:.85,
     fillColor:'#ffd000', fillOpacity:.05, dashArray:'6 4',
   })
-  .bindTooltip('<b style="color:#ffd000">EVACUATION ORDER</b><br>downwind sector — shelter or evacuate', {sticky:true})
+  .bindTooltip('<b style="color:#ffd000">OFFICIAL EVACUATION ORDER</b><br>OCFA · ~40,000 residents<br>N of Garden Grove Blvd · E of Monarch St<br>S of Orangewood Ave · W of Beach Blvd', {sticky:true})
   .addTo(evacGrp);
 
-  const mid = destPt(GKN[0], GKN[1], WIND_BEARING, len * 0.5);
-  L.marker(mid, {
+  L.marker([33.7958, -118.0068], {
     icon: L.divIcon({
       className:'',
-      html:`<div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,208,0,.85);background:rgba(10,12,15,.7);padding:2px 5px;border-radius:2px;white-space:nowrap;">EVACUATION ORDER — DOWNWIND</div>`,
+      html:`<div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,208,0,.9);background:rgba(10,12,15,.78);padding:2px 5px;border-radius:2px;white-space:nowrap;">OFFICIAL EVACUATION ORDER · ~40,000</div>`,
       iconAnchor:[0,0],
     }),
     interactive:false,
@@ -619,7 +648,7 @@ function onSlide() {
   updateUI(b, p);
   if (state.blast) drawBlast(b); else blastGrp.clearLayers();
   if (state.plume) drawPlume(p); else plumeGrp.clearLayers();
-  if (state.evac)  drawEvac(p);  else evacGrp.clearLayers();
+  if (state.evac)  drawEvac();   else evacGrp.clearLayers();
 }
 
 // ── mobile drawer ──────────────────────────────────────────

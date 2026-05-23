@@ -16,8 +16,18 @@ at the bottom replays ~60 h of past hourly wind plus a short forecast, so you ca
 watch how the wind — and the fallout — shifts hour by hour. Observed conditions
 (temp, wind, gusts, humidity) show in the sidebar and the on-map badge.
 
-_Roadmap (v3): a windalert-style wind-speed color field overlay that stays legible
-as you zoom out._
+**Real vs modeled (important):** the **facility location** and the **official OCFA
+evacuation order** (yellow box — N of Garden Grove Blvd, E of Monarch St, S of
+Orangewood Ave, W of Beach Blvd, ~40,000 residents) are real/authoritative. The
+**blast rings and toxic plume are modeled estimates**, not official guidance.
+
+MMA vapor is ~3.4× as dense as air, so the plume uses a **simplified dense-gas
+correction** (suppressed vertical mixing + gravity slumping): it hugs the ground,
+pools outward in all directions near the source, and holds high concentrations
+farther downwind than a neutral plume.
+
+_Roadmap (v3): full Britter-McQuaid dense-gas model, and a windalert-style
+wind-speed color field overlay that stays legible as you zoom out._
 
 ## Editing this site
 
