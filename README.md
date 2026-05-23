@@ -10,6 +10,15 @@ It models a methyl methacrylate (MMA) tank vapor-cloud explosion: TNT-equivalent
 blast radii (fireball → glass-break) and a Pasquill-D Gaussian plume (IDLH / ERPG-2 /
 ERPG-1 isopleths) carried downwind. All math runs client-side — no backend.
 
+**Live weather:** the fallout plume + evacuation wedge are aimed by real-time wind
+from the public [Open-Meteo](https://open-meteo.com) API (no key). A time scrubber
+at the bottom replays ~60 h of past hourly wind plus a short forecast, so you can
+watch how the wind — and the fallout — shifts hour by hour. Observed conditions
+(temp, wind, gusts, humidity) show in the sidebar and the on-map badge.
+
+_Roadmap (v3): a windalert-style wind-speed color field overlay that stays legible
+as you zoom out._
+
 ## Editing this site
 
 The entire site is **one file**: [`index.html`](index.html) (inline CSS + JS).

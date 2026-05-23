@@ -86,7 +86,20 @@
 
   /* ── map wrapper ── */
   #mapwrap { position:relative; flex:1 1 0; min-width:0; min-height:0; }
-  #map { position:absolute; inset:0 0 36px 0; }   /* leave room for infobar */
+  #map { position:absolute; inset:0 0 74px 0; }   /* leave room for time scrubber + infobar */
+
+  /* time scrubber */
+  #timebar {
+    position:absolute; bottom:36px; left:0; right:0; height:38px;
+    background:rgba(10,12,15,.93); border-top:1px solid var(--border);
+    display:flex; align-items:center; gap:10px; padding:0 12px;
+    font-family:'Share Tech Mono',monospace; font-size:.6rem; z-index:1200;
+  }
+  #timebar .tb-key { color:#36c2ff; white-space:nowrap; letter-spacing:.06em; }
+  #timebar input[type=range] { flex:1; min-width:50px; margin:0; }
+  #timebar .tb-read { color:var(--dim); white-space:nowrap; }
+  #timebar #tl-when { color:var(--text); }
+  #timebar #tl-wind { color:var(--yellow); }
 
   /* Leaflet dark tiles */
   .leaflet-tile-pane { filter:brightness(.82) saturate(.65) hue-rotate(185deg) invert(1); }
@@ -116,6 +129,16 @@
     line-height:1.65; z-index:1200; pointer-events:none;
   }
   #windbadge .wv { color:var(--yellow); }
+
+  /* live weather badge */
+  #wxbadge {
+    position:absolute; top:84px; right:9px;
+    background:rgba(10,12,15,.88); border:1px solid #36c2ff44; border-radius:5px;
+    padding:6px 9px; font-family:'Share Tech Mono',monospace; font-size:.6rem;
+    line-height:1.65; z-index:1200; pointer-events:none; max-width:170px;
+  }
+  #wxbadge .wxhd { color:#36c2ff; letter-spacing:.06em; }
+  #wxbadge .wb { color:#9fe6ff; }
 
   /* popup */
   .leaflet-popup-content-wrapper { background:rgba(10,12,15,.95)!important; border:1px solid var(--border)!important; border-radius:4px!important; color:var(--text)!important; font-family:'Share Tech Mono',monospace!important; font-size:.68rem!important; box-shadow:none!important; }
@@ -172,6 +195,10 @@
     .ic { flex:0 0 auto; min-width:84px; }
 
     #windbadge { top:8px; right:8px; font-size:.56rem; padding:5px 8px; }
+    #wxbadge { top:78px; right:8px; font-size:.55rem; padding:5px 8px; max-width:150px; }
+    #timebar { gap:7px; padding:0 9px; font-size:.55rem; }
+    #timebar .tb-key { font-size:0; }            /* hide text label, keep the icon below */
+    #timebar .tb-key::before { content:'⟲'; font-size:.7rem; }
   }
 </style>
 </head>
@@ -204,11 +231,21 @@
       </div>
 
       <div>
-        <div class="sec">Wind (Live)</div>
-        <div class="row"><span class="lbl">From</span><span class="val">West 270°</span></div>
+        <div class="sec">Wind (Live-driven)</div>
+        <div class="row"><span class="lbl">From</span><span class="val" id="s-wfrom">West 270°</span></div>
         <div class="row"><span class="lbl">Speed</span><span class="val" id="s-wspd">8 mph</span></div>
-        <div class="row"><span class="lbl">Gusts</span><span class="val w">up to 20 mph</span></div>
-        <div class="row"><span class="lbl">Plume to</span><span class="val c">NE → Anaheim</span></div>
+        <div class="row"><span class="lbl">Gusts</span><span class="val w" id="s-wgust">up to 20 mph</span></div>
+        <div class="row"><span class="lbl">Fallout to</span><span class="val c" id="s-plumeto">NE</span></div>
+      </div>
+
+      <div>
+        <div class="sec">Observed Weather (Live)</div>
+        <div class="row"><span class="lbl">Conditions</span><span class="val" id="wx-cond">loading…</span></div>
+        <div class="row"><span class="lbl">Temp</span><span class="val" id="wx-temp">—</span></div>
+        <div class="row"><span class="lbl">Humidity</span><span class="val" id="wx-hum">—</span></div>
+        <div class="row"><span class="lbl">Wind</span><span class="val" id="wx-wind">—</span></div>
+        <div class="row"><span class="lbl">Gusts</span><span class="val w" id="wx-gust">—</span></div>
+        <div class="row"><span class="lbl">Updated</span><span class="val" id="wx-time">—</span></div>
       </div>
 
       <div>
@@ -280,10 +317,22 @@
       <div id="map"></div>
 
       <div id="windbadge">
-        WIND <span class="wv">W → NE</span><br>
+        WIND <span class="wv" id="wb-dir">W → NE</span><br>
         SPEED <span class="wv" id="wb-spd">8 mph</span><br>
-        GUSTS <span class="wv">20 mph</span><br>
+        GUSTS <span class="wv" id="wb-gust">20 mph</span><br>
         STABILITY <span class="wv">Pasquill D</span>
+      </div>
+
+      <div id="wxbadge">
+        <span class="wxhd">◍ LIVE WX</span><br>
+        <span class="wb" id="wxb-temp">—</span> · <span id="wxb-cond">loading…</span><br>
+        WIND <span class="wb" id="wxb-wind">—</span>
+      </div>
+
+      <div id="timebar">
+        <span class="tb-key">⟲ WIND TIME</span>
+        <input type="range" id="sl-time" min="0" max="0" value="0" oninput="onTime()">
+        <span class="tb-read"><span id="tl-when">NOW</span> · <span id="tl-wind">—</span></span>
       </div>
 
       <div id="infobar">
@@ -304,7 +353,8 @@
 <script>
 // ── constants ──────────────────────────────────────────────
 const GKN = [33.7739, -117.9410];
-const WIND_BEARING = 45; // degrees from north, NE
+let WIND_BEARING = 45;       // plume travel bearing (deg from N). Updated live from real wind.
+let liveWindSeeded = false;  // seed the speed slider from observed wind once
 
 // ── Leaflet map ────────────────────────────────────────────
 const map = L.map('map', {
@@ -498,27 +548,24 @@ function drawPlume(p) {
   }
 }
 
-function drawEvac() {
+function drawEvac(p) {
   evacGrp.clearLayers();
-  // Actual order: N of GG Blvd (~33.778), S of Orangewood (~33.785),
-  //               E of Monarch (~-117.940), W of Beach Blvd (~-117.994)
-  const bounds = [
-    [33.7855, -117.9940],
-    [33.7855, -117.9180],
-    [33.7780, -117.9180],
-    [33.7780, -117.9940],
-  ];
-  L.polygon(bounds, {
+  // Downwind evacuation sector — a wedge along the live wind bearing, wider than
+  // the toxic plume to absorb wind variability, extending out past the ERPG-2 zone.
+  const len = Math.max((p ? p.erpg2 : 6500), 2400);
+  const pts = buildPlumePoly(len, 32);   // 32° half-angle wedge, rotates with WIND_BEARING
+  L.polygon(pts, {
     color:'#ffd000', weight:2, opacity:.7,
-    fillColor:'#ffd000', fillOpacity:.04, dashArray:'6 4',
+    fillColor:'#ffd000', fillOpacity:.05, dashArray:'6 4',
   })
-  .bindTooltip('<b style="color:#ffd000">EVACUATION ORDER</b><br>~40,000 residents', {sticky:true})
+  .bindTooltip('<b style="color:#ffd000">EVACUATION ORDER</b><br>downwind sector — shelter or evacuate', {sticky:true})
   .addTo(evacGrp);
 
-  L.marker([33.7857, -117.958], {
+  const mid = destPt(GKN[0], GKN[1], WIND_BEARING, len * 0.5);
+  L.marker(mid, {
     icon: L.divIcon({
       className:'',
-      html:`<div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,208,0,.85);background:rgba(10,12,15,.7);padding:2px 5px;border-radius:2px;white-space:nowrap;">EVACUATION ORDER (~40,000 residents)</div>`,
+      html:`<div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,208,0,.85);background:rgba(10,12,15,.7);padding:2px 5px;border-radius:2px;white-space:nowrap;">EVACUATION ORDER — DOWNWIND</div>`,
       iconAnchor:[0,0],
     }),
     interactive:false,
@@ -570,7 +617,7 @@ function onSlide() {
   updateUI(b, p);
   if (state.blast) drawBlast(b); else blastGrp.clearLayers();
   if (state.plume) drawPlume(p); else plumeGrp.clearLayers();
-  if (state.evac)  drawEvac();   else evacGrp.clearLayers();
+  if (state.evac)  drawEvac(p);  else evacGrp.clearLayers();
 }
 
 // ── mobile drawer ──────────────────────────────────────────
@@ -581,8 +628,109 @@ function toggleMenu() {
   bd.classList.toggle('show', open);
 }
 
+// ── live weather ───────────────────────────────────────────
+// Two free, no-key sources: RainViewer for the radar tile overlay, and
+// Open-Meteo for current observed conditions at the site. Both fail silently
+// (the scenario keeps working offline) and refresh on a timer.
+const WMO = {
+  0:'Clear', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast',
+  45:'Fog', 48:'Rime fog', 51:'Light drizzle', 53:'Drizzle', 55:'Heavy drizzle',
+  56:'Freezing drizzle', 57:'Freezing drizzle', 61:'Light rain', 63:'Rain', 65:'Heavy rain',
+  66:'Freezing rain', 67:'Freezing rain', 71:'Light snow', 73:'Snow', 75:'Heavy snow',
+  77:'Snow grains', 80:'Light showers', 81:'Showers', 82:'Violent showers',
+  85:'Snow showers', 86:'Snow showers', 95:'Thunderstorm', 96:'Thunderstorm + hail', 99:'Severe thunderstorm',
+};
+function compass(deg) {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(((deg % 360) / 22.5)) % 16];
+}
+
+function setTxt(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+
+// Hourly wind history + short forecast, so the time scrubber can replay how the
+// wind (and therefore the fallout) shifts hour by hour.
+let windSeries = [];   // [{time,label,dir,speed,gust}]
+let nowIdx = 0;        // index of the hour nearest "now"
+let userScrubbed = false;
+
+function fmtHour(iso) {
+  // iso like "2026-05-23T14:00" (already in local CA time)
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const d = new Date(iso);
+  const hh = iso.slice(11, 16);
+  return isNaN(d) ? hh : `${days[d.getDay()]} ${hh}`;
+}
+
+async function loadWeather() {
+  try {
+    const u = 'https://api.open-meteo.com/v1/forecast?latitude=33.7739&longitude=-117.9410'
+      + '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m'
+      + '&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m'
+      + '&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FLos_Angeles&past_days=2&forecast_days=1';
+    const j = await (await fetch(u)).json();
+    const c = j.current;
+
+    // ── always-current observations (top-right badge + sidebar) ──
+    setTxt('wx-cond', WMO[c.weather_code] || '—');
+    setTxt('wx-temp', Math.round(c.temperature_2m) + '°F');
+    setTxt('wx-hum',  Math.round(c.relative_humidity_2m) + '%');
+    setTxt('wx-wind', `${compass(c.wind_direction_10m)} ${Math.round(c.wind_speed_10m)} mph`);
+    setTxt('wx-gust', Math.round(c.wind_gusts_10m) + ' mph');
+    setTxt('wx-time', (c.time || '').replace('T', ' ').slice(5, 16));
+    setTxt('wxb-temp', Math.round(c.temperature_2m) + '°F');
+    setTxt('wxb-cond', WMO[c.weather_code] || '—');
+    setTxt('wxb-wind', `${compass(c.wind_direction_10m)} ${Math.round(c.wind_speed_10m)} mph`);
+
+    // ── build the hourly series for the scrubber ──
+    const h = j.hourly;
+    windSeries = h.time.map((t, i) => ({
+      time: t, label: fmtHour(t),
+      dir: h.wind_direction_10m[i], speed: h.wind_speed_10m[i], gust: h.wind_gusts_10m[i],
+    }));
+    // nearest hour at/just before "now"
+    const nowT = new Date(c.time).getTime();
+    nowIdx = 0;
+    for (let i = 0; i < windSeries.length; i++) {
+      if (new Date(windSeries[i].time).getTime() <= nowT) nowIdx = i; else break;
+    }
+    const sl = document.getElementById('sl-time');
+    sl.max = String(windSeries.length - 1);
+    if (!userScrubbed) sl.value = String(nowIdx);   // park at NOW unless the user moved it
+    onTime();
+  } catch (e) {
+    setTxt('wx-cond', 'unavailable'); setTxt('wxb-cond', 'unavailable');
+  }
+}
+
+// Apply the scrubbed hour: re-aim the fallout and update all wind readouts.
+function onTime() {
+  if (!windSeries.length) return;
+  const i = +document.getElementById('sl-time').value;
+  userScrubbed = (i !== nowIdx);
+  const w = windSeries[i];
+
+  WIND_BEARING = (w.dir + 180) % 360;            // travel downwind
+  const toC = compass(WIND_BEARING);
+  setTxt('s-wfrom', `${compass(w.dir)} ${Math.round(w.dir)}°`);
+  setTxt('s-plumeto', toC);
+  setTxt('s-wgust', 'up to ' + Math.round(w.gust) + ' mph');
+  setTxt('wb-dir', `${compass(w.dir)} → ${toC}`);
+  setTxt('wb-gust', Math.round(w.gust) + ' mph');
+
+  const rel = i - nowIdx;
+  const when = rel === 0 ? 'NOW' : (rel < 0 ? `${rel}h` : `+${rel}h`);
+  setTxt('tl-when', `${when} · ${w.label}`);
+  setTxt('tl-wind', `${compass(w.dir)} ${Math.round(w.speed)} mph`);
+
+  // drive the model's wind speed from this hour, then recompute + redraw
+  document.getElementById('sl-wind').value = Math.min(20, Math.max(2, Math.round(w.speed)));
+  onSlide();
+}
+
 // ── init ───────────────────────────────────────────────────
 onSlide();
+loadWeather();
+setInterval(loadWeather, 10 * 60 * 1000);      // refresh obs + hourly series every 10 min
 
 // Force Leaflet to recalculate size after layout settles
 setTimeout(() => { map.invalidateSize(); }, 100);
