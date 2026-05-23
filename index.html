@@ -610,7 +610,7 @@ function miStr(m) { return (m/1609).toFixed(2)+' mi'; }
 // ── update UI ──────────────────────────────────────────────
 function updateUI(b, p) {
   // sidebar stats
-  document.getElementById('s-tnt').textContent = b.tntMT.toFixed(1)+' MT TNT';
+  document.getElementById('s-tnt').textContent = b.tntMT.toFixed(1)+' t TNT';
   document.getElementById('d-fb').textContent  = ftStr(b.fireball);
   document.getElementById('d-sv').textContent  = ftStr(b.severe);
   document.getElementById('d-md').textContent  = ftStr(b.moderate);
@@ -619,7 +619,7 @@ function updateUI(b, p) {
   document.getElementById('d-e2').textContent  = miStr(p.erpg2);
   document.getElementById('d-e1').textContent  = miStr(p.erpg1);
   // infobar
-  document.getElementById('ib-tnt').textContent = b.tntMT.toFixed(1)+' MT';
+  document.getElementById('ib-tnt').textContent = b.tntMT.toFixed(1)+' t';
   document.getElementById('ib-fb').textContent  = ftStr(b.fireball);
   document.getElementById('ib-sv').textContent  = ftStr(b.severe);
   document.getElementById('ib-md').textContent  = ftStr(b.moderate);
