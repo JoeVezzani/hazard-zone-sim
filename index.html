@@ -550,6 +550,19 @@
         #zp-result .zp-facts { list-style:none; font-size:.72rem; line-height:1.6; }
         #zp-result .zp-facts li { display:flex; gap:6px; }
         #zp-result .zp-facts .k { color:var(--dim); min-width:74px; } #zp-result .zp-facts .v { color:var(--text); }
+        /* scenario-coverage probability block */
+        #zp-result .cov { margin-top:11px; border-radius:8px; padding:11px 12px; background:var(--panel); border:1px solid var(--border); }
+        #zp-result .cov .cov-h { font-family:'Share Tech Mono',monospace; font-size:.56rem; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); }
+        #zp-result .cov .cov-row { display:flex; align-items:center; gap:10px; margin:7px 0 3px; }
+        #zp-result .cov .cov-pct { font-family:'Bebas Neue',sans-serif; font-size:2.1rem; line-height:.9; }
+        #zp-result .cov .cov-bar { flex:1; height:7px; border-radius:99px; background:#1a2230; overflow:hidden; }
+        #zp-result .cov .cov-bar span { display:block; height:100%; border-radius:99px; transition:width .6s cubic-bezier(.2,.8,.2,1); }
+        #zp-result .cov.red   .cov-pct { color:#ff6b6b; } #zp-result .cov.red   .cov-bar span { background:linear-gradient(90deg,#ff7300,#ff2a2a); }
+        #zp-result .cov.orange .cov-pct { color:#ffb066; } #zp-result .cov.orange .cov-bar span { background:linear-gradient(90deg,#ffcc00,#ff7300); }
+        #zp-result .cov.green .cov-pct { color:#7fe0a8; } #zp-result .cov.green .cov-bar span { background:linear-gradient(90deg,#3cc878,#36c2ff); }
+        #zp-result .cov .cov-sub { font-size:.64rem; color:var(--dim); line-height:1.45; margin-bottom:8px; }
+        #zp-result .cov .cov-when { font-size:.7rem; color:var(--text); line-height:1.5; margin-top:7px; }
+        #zp-result .cov .cov-when b { color:#fff; }
         #zonePanel .zp-note { font-size:.58rem; color:var(--dim); line-height:1.4; margin-top:10px; border-top:1px solid var(--border); padding-top:8px; }
         .you-dot { width:18px;height:18px;border-radius:50%;background:#36c2ff;border:2px solid #fff;box-shadow:0 0 0 0 rgba(54,194,255,.6);animation:youpulse 1.6s infinite; }
         @keyframes youpulse { 0%{box-shadow:0 0 0 0 rgba(54,194,255,.55);} 70%{box-shadow:0 0 0 16px rgba(54,194,255,0);} 100%{box-shadow:0 0 0 0 rgba(54,194,255,0);} }
@@ -1173,6 +1186,7 @@ async function loadWeather() {
     sl.max = String(windSeries.length - 1);
     if (!userScrubbed) sl.value = String(nowIdx);   // park at NOW unless the user moved it
     onTime();
+    if (userLoc) { computeCoverage(); renderVerdict(); }   // refresh scenario-coverage as the forecast updates
   } catch (e) {
     setTxt('wx-cond', 'unavailable'); setTxt('wxb-cond', 'unavailable');
   }
@@ -1327,6 +1341,7 @@ function checkLocation(lat, lng, label) {
    .bindTooltip('You · ' + (label||'your location'), {direction:'top'}).addTo(youGrp);
   L.polyline([[lat,lng], GKN], { color:'#36c2ff', weight:1.5, opacity:.6, dashArray:'5 5' }).addTo(youGrp);
   try { map.fitBounds(L.latLngBounds([lat,lng], GKN).pad(0.4), { maxZoom:14 }); } catch(e) {}
+  computeCoverage();        // scenario-coverage probability for this spot
   renderVerdict();
   fetchUserAQI(lat, lng);   // real air quality at the user's spot
 }
@@ -1339,6 +1354,79 @@ function bearingDeg(from, to) { const t=Math.PI/180, y=Math.sin((to[1]-from[1])*
 function pointInPoly(pt, poly) { let inside=false;
   for (let i=0,j=poly.length-1; i<poly.length; j=i++) { const yi=poly[i][0],xi=poly[i][1],yj=poly[j][0],xj=poly[j][1];
     if (((yi>pt[0])!==(yj>pt[0])) && (pt[1] < (xj-xi)*(pt[0]-yi)/(yj-yi)+xi)) inside=!inside; } return inside; }
+
+// ── scenario-coverage probability ──────────────────────────
+// Conditional on a release happening, run a Monte Carlo over everything that's
+// uncertain — every forecast wind hour (next 48h), all 4 models, B-M vs DEGADIS,
+// leak-vs-explosion, 1–3 cascade tanks, leak rate & VCE yield — reusing the same
+// plume/blast math as the live map. The % = fraction of scenarios that reach you.
+// It deliberately does NOT estimate whether the tank will fail (unknowable).
+let coverage = null;
+function computeCoverage() {
+  if (!userLoc || !windSeries.length) { coverage = null; return; }
+  const u = [userLoc.lat, userLoc.lng];
+  const distU = haversineM(GKN, u), brgU = bearingDeg(GKN, u);
+  const nowT = Date.now();
+  let pool = windSeries.filter(w => { const t = new Date(w.time).getTime(); return t >= nowT - 36e5 && t <= nowT + 48*36e5; });
+  if (!pool.length) pool = windSeries;
+  const models = Object.keys(MODELS).filter(k => MODELS[k].ready);
+
+  // wind-toward share over the forecast window (the dominant lever), shown as a driver
+  let toward = 0;
+  pool.forEach(w => { const bear = (w.dir + 180) % 360; let d = Math.abs(brgU - bear) % 360; if (d > 180) d = 360 - d; if (d <= 55) toward++; });
+  const windTowardPct = Math.round(100 * toward / pool.length);
+
+  const N = 4000;
+  let hits = 0, plumeHits = 0, blastHits = 0, bySingle = 0, nSingle = 0, byCascade = 0, nCascade = 0;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  for (let i = 0; i < N; i++) {
+    const w = pool[(Math.random() * pool.length) | 0];
+    const bear = (w.dir + 180) % 360, speed = Math.max(w.speed || 3, 1);
+    const model = models[(Math.random() * models.length) | 0];
+    const anchor = (Math.random() < 0.5) ? (MODELS[model].pdeg || MODELS[model].p) : MODELS[model].p;
+    const r = Math.random(); const nTanks = r < 0.5 ? 1 : r < 0.8 ? 2 : 3;   // single 50% / 2-tank 30% / 3-tank 20%
+    const leak = rnd(4, 40);
+    const pFac = Math.pow((leak * nTanks) / Q0, 0.5) * Math.pow(8 / Math.max(speed, 2), 0.3);
+    const erpg1 = anchor.erpg1 * pFac;
+    // Reach × direction. Over many forecast hours the wind wanders, so we test a
+    // downwind SECTOR (±28°: plume body + hourly meander) rather than the map's
+    // taper (which pins near points to a sliver under a long plume). This keeps it
+    // tank-sensitive: a bigger release reaches farther, so more spots get covered.
+    let dd = Math.abs(brgU - bear) % 360; if (dd > 180) dd = 360 - dd;
+    const ph = distU <= erpg1 && dd <= 28;
+    let bh = false;
+    if (Math.random() < 0.5) { const b = calcBlast(34000 * nTanks, rnd(1, 10)); bh = distU <= b.glass; }   // explosion scenarios add blast
+    const hit = ph || bh;
+    if (hit) hits++; if (ph) plumeHits++; if (bh) blastHits++;
+    if (nTanks === 1) { nSingle++; if (hit) bySingle++; } else { nCascade++; if (hit) byCascade++; }
+  }
+  coverage = {
+    pct: Math.round(100 * hits / N), windTowardPct,
+    pSingle: nSingle ? Math.round(100 * bySingle / nSingle) : 0,
+    pCascade: nCascade ? Math.round(100 * byCascade / nCascade) : 0,
+    hours: pool.length, distMi: (distU / 1609).toFixed(1), brg: brgU,
+  };
+}
+
+function covBlock() {
+  if (!coverage) return '';
+  const c = coverage;
+  const lvl = c.pct >= 50 ? 'red' : c.pct >= 15 ? 'orange' : 'green';
+  const when = c.windTowardPct < 25
+    ? `You're mostly clear — the wind only points at you <b>${c.windTowardPct}%</b> of the next ${c.hours}h. Risk climbs if it shifts toward you <b>and</b> 2+ tanks fail (${c.pCascade}%).`
+    : `Wind points at you <b>${c.windTowardPct}%</b> of the next ${c.hours}h — the main driver. A cascade (2+ tanks) raises your odds to <b>${c.pCascade}%</b>; a single tank, <b>${c.pSingle}%</b>.`;
+  return '<div class="cov ' + lvl + '">' +
+    '<div class="cov-h">If it releases — your exposure across all scenarios</div>' +
+    '<div class="cov-row"><div class="cov-pct">' + c.pct + '%</div><div class="cov-bar"><span style="width:' + c.pct + '%"></span></div></div>' +
+    '<div class="cov-sub">of modeled scenarios reach you — every wind hour (next ' + c.hours + 'h) × 4 models × leak-or-blast × 1–3 tanks × leak rate. Conditional on a release; <b style="color:var(--text)">not</b> the odds it happens.</div>' +
+    '<ul class="zp-facts">' +
+    '<li><span class="k">Wind→you</span><span class="v">' + c.windTowardPct + '% of next ' + c.hours + 'h</span></li>' +
+    '<li><span class="k">If 1 tank</span><span class="v">' + c.pSingle + '%</span></li>' +
+    '<li><span class="k">If 2+ tanks</span><span class="v">' + c.pCascade + '%</span></li>' +
+    '</ul>' +
+    '<div class="cov-when">' + when + '</div>' +
+    '</div>';
+}
 
 function renderVerdict() {
   if (!userLoc || !lastBlast || !lastPlume) return;
@@ -1369,7 +1457,8 @@ function renderVerdict() {
     (userAQI && userAQI.aqi != null
       ? '<li><span class="k">Air near you</span><span class="v" style="color:' + aqiCat(userAQI.aqi).color + '">AQI ' + Math.round(userAQI.aqi) + ' · ' + aqiCat(userAQI.aqi).label + '</span></li>'
       : '') +
-    '</ul>'
+    '</ul>' +
+    covBlock()
   );
 }
 
