@@ -10,15 +10,11 @@
 <meta property="og:image" content="https://joevezzani.github.io/hazard-zone-sim/og.png?v=3">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:,">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://api.fontshare.com/v2/css?f[]=butler@400,700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ── LunarCrush brand typeface: Fakt (self-hosted) ── */
-  @font-face{font-family:'Fakt';src:url('fonts/fakt-300.woff2') format('woff2');font-weight:300;font-style:normal;font-display:swap}
-  @font-face{font-family:'Fakt';src:url('fonts/fakt-400.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
-  @font-face{font-family:'Fakt';src:url('fonts/fakt-500.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
-  @font-face{font-family:'Fakt';src:url('fonts/fakt-600.woff2') format('woff2');font-weight:600;font-style:normal;font-display:swap}
+  /* ── LunarCrush brand fonts (self-hosted, open-license) ── */
+  @font-face{font-family:'Plus Jakarta Sans';src:url('fonts/jakarta-var.woff2') format('woff2-variations');font-weight:200 800;font-style:normal;font-display:swap}
+  @font-face{font-family:'Roboto Mono';src:url('fonts/robotomono-var.woff2') format('woff2-variations');font-weight:100 700;font-style:normal;font-display:swap}
+  @font-face{font-family:'Butler';src:url('fonts/butler.woff2') format('woff2');font-weight:300 700;font-style:normal;font-display:swap}
   :root{
     --canvas:#0F1A2A; --card:#0E1120; --card-hi:#152338; --surface:#1A1D2E; --footer:#060912;
     --t-head:#FFFFFF; --t-body:#A0A5B8; --t-muted:#6B7090; --t-subtle:#4A4E66;
@@ -31,12 +27,12 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
-  body{background:var(--canvas);color:var(--t-body);font-family:'Fakt',system-ui,-apple-system,sans-serif;
+  body{background:var(--canvas);color:var(--t-body);font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
     font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
   a{color:inherit;text-decoration:none}
   .wrap{max-width:1280px;margin:0 auto;padding:0 24px}
-  .butler{font-family:Butler,'Fakt',serif;font-weight:700}
-  .num{font-family:'Space Grotesk','Fakt',sans-serif;font-feature-settings:"tnum" 1;letter-spacing:-.5px}
+  .butler{font-family:Butler,'Plus Jakarta Sans',serif;font-weight:700}
+  .num{font-family:'Roboto Mono','Plus Jakarta Sans',sans-serif;font-feature-settings:"tnum" 1;letter-spacing:-.5px}
   .grad{background:linear-gradient(90deg,var(--purple),var(--cyan));-webkit-background-clip:text;
     background-clip:text;-webkit-text-fill-color:transparent}
 
@@ -82,7 +78,7 @@
   .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:20px}
   .metric{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:26px 24px}
   .metric .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--t-muted);font-weight:600}
-  .metric .val{font-family:'Space Grotesk','Fakt',sans-serif;font-size:38px;line-height:1.15;font-weight:600;color:var(--t-head);margin-top:10px;letter-spacing:-1px}
+  .metric .val{font-family:'Roboto Mono','Plus Jakarta Sans',sans-serif;font-size:38px;line-height:1.15;font-weight:600;color:var(--t-head);margin-top:10px;letter-spacing:-1px}
   .metric .delta{display:inline-flex;align-items:center;gap:5px;margin-top:10px;font-size:12px;font-weight:600;
     padding:3px 10px;border-radius:9999px}
   .delta.up{background:var(--g-tint);color:var(--green)} .delta.neu{background:var(--surface);color:var(--t-muted)}
@@ -94,12 +90,22 @@
   .kw-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:24px}
   .kw-list{display:flex;flex-direction:column;gap:10px}
   .kw{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
-  .kw .term{font-family:'Space Grotesk','Fakt',monospace;color:var(--t-head);font-weight:600;font-size:14px;flex:1}
+  .kw .term{font-family:'Roboto Mono','Plus Jakarta Sans',monospace;color:var(--t-head);font-weight:600;font-size:14px;flex:1}
   .kw .st{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:9999px;flex:none}
-  .st.primary{background:var(--g-tint);color:var(--green)} .st.empty{background:var(--surface);color:var(--t-subtle)} .st.generic{background:var(--a-tint);color:var(--amber)}
-  .kw .ct{font-size:12px;color:var(--t-muted);flex:none;width:96px;text-align:right;font-family:'Space Grotesk',sans-serif}
+  .st.primary,.st.event{background:var(--g-tint);color:var(--green)} .st.empty{background:var(--surface);color:var(--t-subtle)}
+  .st.generic,.st.regional{background:var(--a-tint);color:var(--amber)} .st.company{background:var(--c-tint);color:var(--cyan)}
+  /* keyword bars */
+  .kwbars{display:grid;grid-template-columns:1fr 1fr;gap:9px 28px}
+  .kwbar{display:flex;align-items:center;gap:12px}
+  .kwbar .kt{width:140px;flex:none;font-size:13px;color:var(--t-body);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kwbar .ktrack{flex:1;height:9px;background:var(--surface);border-radius:9999px;overflow:hidden}
+  .kwbar .kfill{display:block;height:100%;border-radius:9999px;background:linear-gradient(90deg,var(--purple),var(--cyan));transition:width 1s cubic-bezier(.2,.8,.2,1)}
+  .kwbar .kn{width:78px;flex:none;font-family:'Roboto Mono',monospace;font-size:12.5px;color:var(--t-head);font-weight:600}
+  .kwbar .kn .kpc{color:var(--t-subtle);font-weight:400;font-size:11px;margin-left:5px}
+  @media(max-width:760px){.kwbars{grid-template-columns:1fr}.kwbar .kt{width:96px}}
+  .kw .ct{font-size:12px;color:var(--t-muted);flex:none;width:96px;text-align:right;font-family:'Roboto Mono',sans-serif}
   .kw-note{color:var(--t-muted);font-size:13.5px;line-height:1.65}
-  .kw-note b{color:var(--t-body)} .kw-note .term{font-family:'Space Grotesk',monospace;color:var(--purple-l);font-size:12.5px;background:var(--p-tint);padding:1px 7px;border-radius:5px}
+  .kw-note b{color:var(--t-body)} .kw-note .term{font-family:'Roboto Mono',monospace;color:var(--purple-l);font-size:12.5px;background:var(--p-tint);padding:1px 7px;border-radius:5px}
   .nets-scanned{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
   .nets-scanned .np{font-size:11.5px;font-weight:600;background:var(--surface);color:var(--t-body);padding:5px 11px;border-radius:9999px;border:1px solid var(--border-sub)}
 
@@ -150,7 +156,7 @@
   .chart-card h3{color:var(--t-head);font-size:18px;font-weight:600;margin-bottom:4px}
   .chart-card .cap{color:var(--t-muted);font-size:13px;margin-bottom:22px}
   svg{display:block;width:100%;overflow:visible}
-  .axis{fill:var(--t-subtle);font-size:10px;font-family:'Space Grotesk','Fakt',sans-serif}
+  .axis{fill:var(--t-subtle);font-size:10px;font-family:'Roboto Mono','Plus Jakarta Sans',sans-serif}
 
   /* network bars */
   .netrow{display:flex;align-items:center;gap:14px;margin-bottom:18px}
@@ -391,23 +397,35 @@ function render(d){
     </a>`).join('')}</div>
   </div></section>`;
 
-  // ── TOPICS & KEYWORDS TRACKED (methodology) ──
+  // ── KEYWORDS & TOPICS TRACKED (methodology) ──
   const m=d.methodology;
   if(m){
+    const kws=m.keywords||[], kmax=kws.length?Math.max(...kws.map(k=>k.count)):1;
+    const STLAB={event:'Event',company:'Company',regional:'Regional'};
     h+=`<section><div class="wrap">
       <div class="sec-head"><span class="pill"><span class="dot"></span> What we tracked</span>
-        <h2>Topics &amp; keywords</h2><p>How this dashboard is sourced — and why a focused author count maps to massive reach.</p></div>
-      <div class="card"><div class="kw-grid">
+        <h2>Keywords &amp; topics</h2><p>The wide net behind this dashboard — every count is a real mention across ${fmt(m.corpus_size)} posts.</p></div>
+      <div class="card">
+        <h3 style="color:var(--t-head);font-size:17px;font-weight:600;margin-bottom:4px">Keywords across the conversation</h3>
+        <div class="cap" style="color:var(--t-muted);font-size:13px;margin-bottom:20px">Mentions in post text, all networks · top ${kws.length} terms</div>
+        <div class="kwbars">${kws.map(k=>`<div class="kwbar">
+          <span class="kt">${esc(k.term)}</span>
+          <span class="ktrack"><span class="kfill" style="width:${Math.max(5,Math.round(k.count/kmax*100))}%"></span></span>
+          <span class="kn">${fmt(k.count)}<span class="kpc">${k.pct}%</span></span>
+        </div>`).join('')}</div>
+      </div>
+      <div class="card" style="margin-top:24px"><div class="kw-grid">
         <div>
-          <div class="kw-list">${m.topics_tested.map(t=>`<div class="kw">
+          <h3 style="color:var(--t-head);font-size:17px;font-weight:600;margin-bottom:16px">LunarCrush topics tracked</h3>
+          <div class="kw-list">${(m.topics_tracked||[]).map(t=>`<div class="kw">
             <span class="term">${esc(t.term)}</span>
-            <span class="ct">${t.posts?fmt(t.posts)+' posts':'—'}</span>
-            <span class="st ${t.status}">${t.status}</span>
+            <span class="ct">${fmt(t.posts)} posts · ${fmt(t.creators)} creators</span>
+            <span class="st ${t.status}">${STLAB[t.status]||t.status}</span>
           </div>`).join('')}</div>
           <div class="nets-scanned">${m.networks.map(n=>`<span class="np">${esc(n.label)} · ${fmt(n.posts)}</span>`).join('')}</div>
         </div>
         <div class="kw-note">
-          <p>LunarCrush indexes social activity by <b>topic</b>. The event lives almost entirely under the <span class="term">garden grove</span> topic — company-name terms like <span class="term">gkn aerospace</span> aren’t established topics and return nothing, while <span class="term">hazmat</span> is too generic to be event-specific.</p>
+          <p><span class="st event" style="display:inline-block">Event</span> topics (<span class="term">garden grove</span>, <span class="term">gkn aerospace</span>) are on-incident. <span class="st regional" style="display:inline-block">Regional</span> topics (<span class="term">orange county</span>, <span class="term">anaheim</span>) show the story spreading — about half of orange county's top conversation is this crisis.</p>
           <p style="margin-top:14px">${esc(m.note)}</p>
         </div>
       </div></div>
