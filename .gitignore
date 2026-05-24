@@ -2,3 +2,7 @@
 .DS_Store
 node_modules/
 sensors.json
+
+# social-data raw pulls (intermediate; social.json is the committed deliverable)
+social-data/gg_*.json
+social-data/official_*.json
