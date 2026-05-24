@@ -213,8 +213,97 @@
   <div id="header">
     <div class="alert-dot"></div>
     <h1>GKN AEROSPACE — HAZARD ZONE SIMULATOR</h1>
+    <button id="explainBtn" onclick="openExplain()" aria-label="What happens if the tank fails">⚠ What happens if it fails?</button>
     <div class="sub">12122 WESTERN AVE, GARDEN GROVE CA &nbsp;|&nbsp; MMA TANK EMERGENCY &nbsp;|&nbsp; MAY 23 2026</div>
     <button id="menuBtn" onclick="toggleMenu()" aria-label="Toggle controls"><span class="bars"><i></i><i></i><i></i></span> DATA</button>
+  </div>
+
+  <!-- FAILURE EXPLAINER MODAL -->
+  <style>
+    #explainBtn { margin-left:14px; font-family:'Share Tech Mono',monospace; font-size:.62rem;
+      letter-spacing:.03em; cursor:pointer; white-space:nowrap; flex-shrink:0;
+      background:rgba(255,115,0,.14); color:#ffb066; border:1px solid #ff730066;
+      padding:5px 10px; border-radius:5px; transition:all .15s; }
+    #explainBtn:hover { background:rgba(255,115,0,.28); border-color:#ff7300; color:#ffd6b0; }
+    #explainModal { position:fixed; inset:0; z-index:5000; display:none;
+      background:rgba(5,7,10,.84); align-items:flex-start; justify-content:center;
+      padding:28px 16px; overflow-y:auto; }
+    #explainModal.open { display:flex; }
+    #explainCard { background:var(--panel); border:1px solid var(--border); border-radius:11px;
+      max-width:680px; width:100%; box-shadow:0 24px 70px rgba(0,0,0,.6); overflow:hidden; }
+    #explainCard .ex-hd { display:flex; align-items:center; gap:10px; padding:15px 20px;
+      border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--panel); }
+    #explainCard .ex-hd h2 { font-family:'Bebas Neue',sans-serif; font-size:1.25rem; letter-spacing:.05em; color:#fff; }
+    #explainCard .ex-x { margin-left:auto; cursor:pointer; color:var(--dim); font-size:1.4rem; line-height:1;
+      background:none; border:none; padding:2px 6px; border-radius:5px; transition:all .15s; }
+    #explainCard .ex-x:hover { color:#fff; background:rgba(255,255,255,.08); }
+    #explainCard img.ex-img { width:100%; display:block; }
+    #explainCard .ex-cap { font-size:.6rem; color:var(--dim); font-family:'Share Tech Mono',monospace;
+      padding:6px 20px 0; line-height:1.4; }
+    #explainCard .ex-body { padding:14px 20px 24px; }
+    #explainCard .ex-body h3 { font-family:'Share Tech Mono',monospace; font-size:.72rem; letter-spacing:.08em;
+      text-transform:uppercase; color:#ffb066; margin:18px 0 7px; }
+    #explainCard .ex-body h3:first-child { margin-top:6px; }
+    #explainCard .ex-body p { font-size:.83rem; line-height:1.6; color:var(--text); margin-bottom:9px; }
+    #explainCard .ex-body li { font-size:.83rem; line-height:1.55; color:var(--text); margin:0 0 7px 18px; }
+    #explainCard .ex-body b { color:#fff; }
+    .ex-blast { display:flex; gap:18px; align-items:center; margin:4px 0 14px; flex-wrap:wrap; }
+    .ex-rings { width:190px; height:auto; flex-shrink:0; }
+    .ex-zones { flex:1; min-width:230px; display:flex; flex-direction:column; gap:10px; }
+    .ex-zone { display:flex; gap:9px; align-items:flex-start; }
+    .ex-zone .zsw { width:12px; height:12px; border-radius:2px; flex-shrink:0; margin-top:3px; }
+    .ex-zone .zt { font-size:.8rem; }
+    .ex-zone .zt b { color:#fff; }
+    .ex-zone .zd { font-family:'Share Tech Mono',monospace; color:#ffb066; }
+    .ex-zone .zeff { display:block; color:var(--text); font-size:.76rem; line-height:1.45; margin-top:1px; }
+  </style>
+  <div id="explainModal" onclick="if(event.target===this)closeExplain()">
+    <div id="explainCard">
+      <div class="ex-hd">
+        <span class="dot9" style="background:#ff2a2a;width:11px;height:11px;border-radius:50%;"></span>
+        <h2>What happens if the tank fails</h2>
+        <button class="ex-x" onclick="closeExplain()" aria-label="Close">&times;</button>
+      </div>
+      <div class="ex-body">
+        <h3 style="margin-top:6px;">The explosion radius, up close</h3>
+        <p style="margin-bottom:6px;">What to expect at each distance from the tank. These rings track the current scenario in the simulator, so they grow and shrink as you change the leak rate, cascade tanks, and yield.</p>
+        <div class="ex-blast">
+          <svg viewBox="0 0 200 190" class="ex-rings" aria-hidden="true">
+            <circle cx="100" cy="95" r="86" fill="#ffcc00" fill-opacity=".10" stroke="#ffcc00" stroke-opacity=".55" stroke-width="1.2" stroke-dasharray="4 4"/>
+            <circle cx="100" cy="95" r="62" fill="#ff8800" fill-opacity=".13" stroke="#ff8800" stroke-opacity=".6" stroke-width="1.2" stroke-dasharray="4 4"/>
+            <circle cx="100" cy="95" r="40" fill="#ff5500" fill-opacity=".18" stroke="#ff5500" stroke-opacity=".7" stroke-width="1.2" stroke-dasharray="4 4"/>
+            <circle cx="100" cy="95" r="19" fill="#ff2a2a" fill-opacity=".5"  stroke="#ff2a2a" stroke-opacity=".9" stroke-width="1.2"/>
+            <rect x="95" y="89" width="10" height="12" rx="2" fill="#0a0c0f" stroke="#fff" stroke-width="1"/>
+          </svg>
+          <div class="ex-zones">
+            <div class="ex-zone"><span class="zsw" style="background:#ff2a2a"></span><span class="zt"><b>Fireball</b> · <span class="zd" id="ex-d-fb">—</span><span class="zeff">Total destruction. Nothing inside survives.</span></span></div>
+            <div class="ex-zone"><span class="zsw" style="background:#ff5500"></span><span class="zt"><b>Severe</b> (~10 psi) · <span class="zd" id="ex-d-sv">—</span><span class="zeff">Reinforced buildings collapse; near-total fatalities.</span></span></div>
+            <div class="ex-zone"><span class="zsw" style="background:#ff8800"></span><span class="zt"><b>Moderate</b> (~3 psi) · <span class="zd" id="ex-d-md">—</span><span class="zeff">Homes heavily damaged or partly collapse; widespread serious injuries.</span></span></div>
+            <div class="ex-zone"><span class="zsw" style="background:#ffcc00"></span><span class="zt"><b>Glass break</b> (~1 psi) · <span class="zd" id="ex-d-gl">—</span><span class="zeff">Windows shatter for blocks. Flying glass is the main injury, even far from the tank.</span></span></div>
+          </div>
+        </div>
+
+        <h3>The mechanism most coverage misses</h3>
+        <p>MMA (methyl methacrylate) is a <b>monomer</b>: a liquid that wants to link up into plastic. It is kept stable by a small amount of inhibitor. If the tank loses that inhibitor or heats up, the MMA begins to <b>polymerize</b>, turning into solid acrylic, the same material as Plexiglas. That reaction gives off heat, and the heat makes it run faster, so it can accelerate on its own. A tank that stays in crisis for days is a slow polymerization runaway that crews are working to keep cool.</p>
+
+        <h3>It is a race between two endings</h3>
+        <ul>
+          <li><b>Controlled:</b> the heat escapes fast enough and the contents harden into a block of solid plastic. The tank is destroyed, but there is no explosion. Keeping it cool is what produces this outcome.</li>
+          <li><b>Runaway:</b> heat builds faster than it can escape. The remaining liquid boils (MMA boils near 100&deg;C / 212&deg;F) and flashes to vapor, pressure climbs, and the tank ruptures. At very high temperature the new plastic can break back down into vapor, adding still more pressure.</li>
+        </ul>
+        <p>So it solidifies and pressurizes at the same time. Which one finishes first decides whether you get a ruined tank or an explosion.</p>
+
+        <h3>Three ways a failure can go</h3>
+        <ul>
+          <li><b>BLEVE</b> (boiling-liquid expanding-vapor explosion): the tank bursts while its contents are superheated. Fireball, pressure blast, and tank fragments thrown far.</li>
+          <li><b>Vapor-cloud explosion:</b> vapor that has pooled along the ground drifts out, finds an ignition source, and ignites all at once. This is what the simulator's blast rings estimate.</li>
+          <li><b>Pool fire:</b> the spilled liquid simply burns, feeding the toxic plume.</li>
+        </ul>
+
+        <h3>Why the zones look the way they do</h3>
+        <p>The blast rings run from the fireball out to a glass-break radius. That outer ring matters most for injuries: windows shatter blocks away and flying glass hurts people who felt safe. The toxic plume is separate. MMA vapor is heavier than air, so it hugs the ground and drifts downwind, irritating eyes and lungs. The evacuation area is sized for the glass-break radius plus the downwind plume, which is why the wind direction changes the picture so much.</p>
+      </div>
+    </div>
   </div>
 
   <div id="body">
@@ -1026,6 +1115,18 @@ function onTime() {
   document.getElementById('sl-wind').value = Math.min(20, Math.max(2, Math.round(w.speed)));
   onSlide();
 }
+
+// ── failure explainer modal ────────────────────────────────
+function openExplain()  {
+  // mirror the live blast distances from the sidebar into the radius diagram
+  ['fb','sv','md','gl'].forEach(k => {
+    const src = document.getElementById('d-'+k), dst = document.getElementById('ex-d-'+k);
+    if (src && dst) dst.textContent = src.textContent;
+  });
+  document.getElementById('explainModal').classList.add('open');
+}
+function closeExplain() { document.getElementById('explainModal').classList.remove('open'); }
+window.addEventListener('keydown', e => { if (e.key === 'Escape') closeExplain(); });
 
 // ── init ───────────────────────────────────────────────────
 onSlide();
