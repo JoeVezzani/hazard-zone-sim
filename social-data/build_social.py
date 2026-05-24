@@ -7,7 +7,9 @@ Usage: LUNARCRUSH_KEY=... python3 build_social.py
 """
 import urllib.request, urllib.parse, json, os, datetime, re
 
-KEY = os.environ.get("LUNARCRUSH_KEY", "v5r8ia8smqrot0th6mro2bjnompjzyl59ivd2ok")
+KEY = os.environ.get("LUNARCRUSH_KEY")
+if not KEY:
+    raise SystemExit("Set LUNARCRUSH_KEY env var (do not hardcode keys).")
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124.0 Safari/537.36"
 
 def get(path):
