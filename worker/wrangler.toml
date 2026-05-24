@@ -1,0 +1,12 @@
+name = "hazard-aq"
+main = "worker.js"
+compatibility_date = "2026-05-24"
+account_id = "4f242a009dc317a0d4445f97d86b1bec"
+
+# Refresh sensors every 2 minutes (PurpleAir 10-min averages update ~every 2 min).
+[triggers]
+crons = ["*/2 * * * *"]
+
+[[kv_namespaces]]
+binding = "AQ"
+id = "9ef3d6367d4c456aa3fd1df581ab57ff"
