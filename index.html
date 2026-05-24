@@ -128,18 +128,18 @@
   /* wind badge */
   #windbadge {
     position:absolute; top:9px; right:9px;
-    background:rgba(10,12,15,.88); border:1px solid var(--border); border-radius:5px;
-    padding:6px 9px; font-family:'Share Tech Mono',monospace; font-size:.6rem;
-    line-height:1.65; z-index:1200; pointer-events:none;
+    background:rgba(10,12,15,.9); border:1px solid var(--border); border-radius:6px;
+    padding:8px 12px; font-family:'Share Tech Mono',monospace; font-size:.74rem;
+    line-height:1.7; z-index:1200; pointer-events:none;
   }
   #windbadge .wv { color:var(--yellow); }
 
   /* live weather badge */
   #wxbadge {
-    position:absolute; top:84px; right:9px;
-    background:rgba(10,12,15,.88); border:1px solid #36c2ff44; border-radius:5px;
-    padding:6px 9px; font-family:'Share Tech Mono',monospace; font-size:.6rem;
-    line-height:1.65; z-index:1200; pointer-events:none; max-width:170px;
+    position:absolute; top:118px; right:9px;
+    background:rgba(10,12,15,.9); border:1px solid #36c2ff44; border-radius:6px;
+    padding:8px 12px; font-family:'Share Tech Mono',monospace; font-size:.74rem;
+    line-height:1.7; z-index:1200; pointer-events:none; max-width:200px;
   }
   #wxbadge .wxhd { color:#36c2ff; letter-spacing:.06em; }
   #wxbadge .wb { color:#9fe6ff; }
@@ -198,8 +198,8 @@
     #infobar { overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
     .ic { flex:0 0 auto; min-width:84px; }
 
-    #windbadge { top:8px; right:8px; font-size:.56rem; padding:5px 8px; }
-    #wxbadge { top:78px; right:8px; font-size:.55rem; padding:5px 8px; max-width:150px; }
+    #windbadge { top:8px; right:8px; font-size:.66rem; padding:6px 9px; }
+    #wxbadge { top:108px; right:8px; font-size:.64rem; padding:6px 9px; max-width:178px; }
     #timebar { gap:7px; padding:0 9px; font-size:.55rem; }
     #timebar .tb-key { font-size:0; }            /* hide text label, keep the icon below */
     #timebar .tb-key::before { content:'⟲'; font-size:.7rem; }
@@ -346,6 +346,15 @@
       </div>
 
       <div>
+        <div class="sec">Air Quality (Live)</div>
+        <div class="row"><span class="lbl">US AQI (site)</span><span class="val" id="aq-aqi">—</span></div>
+        <div class="row"><span class="lbl">Category</span><span class="val" id="aq-cat">loading…</span></div>
+        <div class="row"><span class="lbl">PM2.5</span><span class="val" id="aq-pm">—</span></div>
+        <div class="row"><span class="lbl">Updated</span><span class="val" id="aq-time">—</span></div>
+        <div style="font-size:.57rem;color:var(--dim);margin-top:4px;line-height:1.35;">Tracks smoke &amp; particulates (PM2.5), not MMA vapor directly. Source: Open-Meteo (keyless).</div>
+      </div>
+
+      <div>
         <div class="sec">Layers</div>
         <div class="tog-row" onclick="tog('basemap')">
           <span class="tog-label"><span class="dot9" style="background:#4a90d9"></span>Base map</span>
@@ -363,6 +372,11 @@
           <span class="tog-label"><span class="dot9" style="background:#ffd000"></span>Evac order</span>
           <div class="sw on" id="sw-evac"></div>
         </div>
+        <div class="tog-row" onclick="tog('aq')">
+          <span class="tog-label"><span class="dot9" style="background:#3cc878"></span>Air quality sensors <span id="aq-sensors-n" style="color:var(--dim);font-size:.92em"></span></span>
+          <div class="sw" id="sw-aq"></div>
+        </div>
+        <div style="font-size:.57rem;color:var(--dim);margin-top:2px;line-height:1.35;">Live PurpleAir sensors, colored by AQI. Smoke/particulates, not MMA vapor.</div>
       </div>
 
       <div>
@@ -492,6 +506,62 @@
     <div id="mapwrap">
       <div id="map"></div>
 
+      <!-- "Am I in the zone?" locator -->
+      <style>
+        #zoneBtn { position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:1300; cursor:pointer;
+          font-family:'Share Tech Mono',monospace; font-size:.74rem; letter-spacing:.03em; font-weight:600;
+          background:rgba(54,194,255,.22); color:#dff4ff; border:1px solid #36c2ff;
+          padding:10px 18px; border-radius:22px; transition:all .15s; animation:zoneglow 2.2s ease-in-out infinite; }
+        #zoneBtn:hover { background:rgba(54,194,255,.38); transform:translateX(-50%) scale(1.04); animation:none; }
+        @keyframes zoneglow { 0%,100%{ box-shadow:0 3px 14px rgba(0,0,0,.5), 0 0 0 0 rgba(54,194,255,0); }
+          50%{ box-shadow:0 3px 18px rgba(0,0,0,.5), 0 0 17px 2px rgba(54,194,255,.5); } }
+        #zonePanel { position:absolute; top:9px; left:50%; transform:translateX(-50%); z-index:1310; display:none; width:268px; max-width:calc(100% - 18px);
+          background:rgba(12,15,20,.97); border:1px solid #36c2ff55; border-radius:10px; padding:13px;
+          box-shadow:0 12px 38px rgba(0,0,0,.6); font-family:'DM Sans',sans-serif; }
+        #zonePanel.open { display:block; }
+        #zonePanel .zp-hd { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+        #zonePanel .zp-hd span { font-family:'Share Tech Mono',monospace; font-size:.62rem; letter-spacing:.1em; text-transform:uppercase; color:#7fd8ff; }
+        #zonePanel .zp-x { background:none; border:none; color:var(--dim); font-size:1.2rem; line-height:1; cursor:pointer; padding:0 3px; }
+        #zonePanel .zp-x:hover { color:#fff; }
+        #zp-locate { width:100%; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:.82rem; font-weight:600;
+          background:#2a6fff; color:#fff; border:none; padding:10px; border-radius:7px; transition:filter .15s; }
+        #zp-locate:hover { filter:brightness(1.13); }
+        #zonePanel .zp-or { text-align:center; color:var(--dim); font-size:.6rem; margin:9px 0; letter-spacing:.12em; }
+        #zonePanel form { display:flex; gap:6px; }
+        #zp-addr { flex:1; min-width:0; background:#0a0c0f; border:1px solid var(--border); border-radius:6px; color:var(--text);
+          font-family:'DM Sans',sans-serif; font-size:.78rem; padding:8px; outline:none; }
+        #zp-addr:focus { border-color:#36c2ff; }
+        #zonePanel form button { cursor:pointer; background:rgba(255,255,255,.08); color:var(--text); border:1px solid var(--border);
+          border-radius:6px; font-family:'Share Tech Mono',monospace; font-size:.66rem; padding:0 12px; }
+        #zonePanel form button:hover { border-color:#36c2ff; color:#fff; }
+        #zp-result { margin-top:11px; }
+        #zp-result .verdict { border-radius:8px; padding:10px 11px; margin-bottom:9px; }
+        #zp-result .verdict h4 { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:.03em; line-height:1.08; margin-bottom:3px; }
+        #zp-result .verdict p { font-size:.73rem; color:var(--text); line-height:1.45; }
+        #zp-result .verdict.red { background:rgba(255,42,42,.16); border:1px solid #ff2a2a88; } #zp-result .verdict.red h4 { color:#ff6b6b; }
+        #zp-result .verdict.orange { background:rgba(255,115,0,.15); border:1px solid #ff730088; } #zp-result .verdict.orange h4 { color:#ffb066; }
+        #zp-result .verdict.green { background:rgba(60,200,120,.14); border:1px solid #3cc87888; } #zp-result .verdict.green h4 { color:#7fe0a8; }
+        #zp-result .zp-facts { list-style:none; font-size:.72rem; line-height:1.6; }
+        #zp-result .zp-facts li { display:flex; gap:6px; }
+        #zp-result .zp-facts .k { color:var(--dim); min-width:74px; } #zp-result .zp-facts .v { color:var(--text); }
+        #zonePanel .zp-note { font-size:.58rem; color:var(--dim); line-height:1.4; margin-top:10px; border-top:1px solid var(--border); padding-top:8px; }
+        .you-dot { width:18px;height:18px;border-radius:50%;background:#36c2ff;border:2px solid #fff;box-shadow:0 0 0 0 rgba(54,194,255,.6);animation:youpulse 1.6s infinite; }
+        @keyframes youpulse { 0%{box-shadow:0 0 0 0 rgba(54,194,255,.55);} 70%{box-shadow:0 0 0 16px rgba(54,194,255,0);} 100%{box-shadow:0 0 0 0 rgba(54,194,255,0);} }
+      </style>
+      <button id="zoneBtn" onclick="toggleZone()">📍 Am I in the zone?</button>
+      <div id="zonePanel">
+        <div class="zp-hd"><span>Check your location</span><button class="zp-x" onclick="toggleZone()" aria-label="Close">&times;</button></div>
+        <div style="font-size:.68rem;color:var(--text);line-height:1.4;margin-bottom:10px;">Affected by the GKN evacuation? See if your address is in the danger zone right now.</div>
+        <button id="zp-locate" onclick="locateMe()">📍 Use my location</button>
+        <div class="zp-or">— OR —</div>
+        <form onsubmit="geocodeAddress();return false;">
+          <input id="zp-addr" type="text" placeholder="Type an address or place" autocomplete="off">
+          <button type="submit">Check</button>
+        </form>
+        <div id="zp-result"></div>
+        <div class="zp-note">Unofficial estimate from the current model + live wind. Always follow official orders from emergency services.</div>
+      </div>
+
       <div id="windbadge">
         WIND <span class="wv" id="wb-dir">W → NE</span><br>
         SPEED <span class="wv" id="wb-spd">8 mph</span><br>
@@ -502,7 +572,8 @@
       <div id="wxbadge">
         <span class="wxhd">◍ LIVE WX</span><br>
         <span class="wb" id="wxb-temp">—</span> · <span id="wxb-cond">loading…</span><br>
-        WIND <span class="wb" id="wxb-wind">—</span>
+        WIND <span class="wb" id="wxb-wind">—</span><br>
+        AQI <span class="wb" id="wxb-aqi">—</span>
       </div>
 
       <div id="timebar">
@@ -532,6 +603,14 @@
 // (33°47'00.9"N 117°59'59.4"W); site of the real May 2026 MMA tank emergency.
 const GKN = [33.783583, -117.999833];
 let WIND_BEARING = 45;       // plume travel bearing (deg from N). Updated live from real wind.
+// Official evacuation order box (authoritative, fixed). Shared by drawEvac + the locator.
+const EVAC_BOX = [
+  [33.8181, -118.0284],   // NW  Ball Rd × Valley View St
+  [33.8181, -117.9845],   // NE  Ball Rd × Dale St
+  [33.7669, -117.9845],   // SE  Trask Ave × Dale St
+  [33.7669, -118.0284],   // SW  Trask Ave × Valley View St
+];
+let lastBlast = null, lastPlume = null;   // most recent computed rings, for the "am I in the zone?" check
 let liveWindSeeded = false;  // seed the speed slider from observed wind once
 
 // ── Leaflet map ────────────────────────────────────────────
@@ -674,7 +753,7 @@ function drawModels() {
 }
 
 // ── layer state ────────────────────────────────────────────
-const state = { basemap:true, blast:true, plume:true, evac:true, t2:true, t3:true, plumeModel:'bm', primaryModel:'openai' };
+const state = { basemap:true, blast:true, plume:true, evac:true, t2:true, t3:true, aq:false, plumeModel:'bm', primaryModel:'openai' };
 
 // Plume dispersion model selector (mutually exclusive): B-M / DEGADIS / neutral Gaussian.
 const PM_DESC = {
@@ -699,6 +778,7 @@ function tog(name) {
     return;
   }
   if (name === 't2' || name === 't3') { onSlide(); return; }   // recompute blast + plume + models
+  if (name === 'aq') { if (state.aq) { map.addLayer(aqGrp); loadSensors(); } else map.removeLayer(aqGrp); return; }
   const grp = name==='blast' ? blastGrp : name==='plume' ? plumeGrp : evacGrp;
   if (state[name]) map.addLayer(grp); else map.removeLayer(grp);
 }
@@ -908,12 +988,7 @@ function drawEvac() {
   // south of Ball Rd, east of Valley View St, west of Dale St (~40,000 residents
   // across Garden Grove + parts of W. Anaheim, Stanton & Cypress). Authoritative:
   // fixed, does not move with the model.
-  const box = [
-    [33.8181, -118.0284],   // NW  Ball Rd × Valley View St
-    [33.8181, -117.9845],   // NE  Ball Rd × Dale St
-    [33.7669, -117.9845],   // SE  Trask Ave × Dale St
-    [33.7669, -118.0284],   // SW  Trask Ave × Valley View St
-  ];
+  const box = EVAC_BOX;
   L.polygon(box, {
     color:'#ffd000', weight:2, opacity:.85,
     fillColor:'#ffd000', fillOpacity:.05, dashArray:'6 4',
@@ -1011,6 +1086,8 @@ function onSlide() {
   if (state.plume) drawPlume(p); else plumeGrp.clearLayers();
   if (state.evac)  drawEvac();   else evacGrp.clearLayers();
   drawModels();   // model overlays track the cascade tanks + volume
+  lastBlast = b; lastPlume = p;
+  if (typeof renderVerdict === 'function') renderVerdict();   // live-update "am I in the zone?" as wind/scenario shift
 }
 
 // ── mobile drawer ──────────────────────────────────────────
@@ -1142,11 +1219,169 @@ window.addEventListener('popstate', () => {
   else document.getElementById('explainModal').classList.remove('open');
 });
 
+// ── live air quality (keyless, Open-Meteo) ──────────────────
+// PM2.5 / US-AQI tracks smoke & particulates, NOT MMA vapor directly. Honest proxy.
+function aqiCat(aqi) {
+  if (aqi == null || isNaN(aqi)) return { label:'—', color:'var(--text)' };
+  if (aqi <= 50)  return { label:'Good', color:'#3cc878' };
+  if (aqi <= 100) return { label:'Moderate', color:'#ffd000' };
+  if (aqi <= 150) return { label:'Unhealthy (sensitive)', color:'#ff8800' };
+  if (aqi <= 200) return { label:'Unhealthy', color:'#ff2a2a' };
+  if (aqi <= 300) return { label:'Very unhealthy', color:'#b39af5' };
+  return { label:'Hazardous', color:'#c0392b' };
+}
+async function loadAirQuality() {
+  try {
+    const u = 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + GKN[0] + '&longitude=' + GKN[1]
+      + '&current=us_aqi,pm2_5,pm10&timezone=America%2FLos_Angeles';
+    const c = (await (await fetch(u)).json()).current || {};
+    const cat = aqiCat(c.us_aqi);
+    const a = document.getElementById('aq-aqi'); if (a) { a.textContent = c.us_aqi != null ? Math.round(c.us_aqi) : '—'; a.style.color = cat.color; }
+    const ce = document.getElementById('aq-cat'); if (ce) { ce.textContent = cat.label; ce.style.color = cat.color; }
+    setTxt('aq-pm', c.pm2_5 != null ? Math.round(c.pm2_5) + ' µg/m³' : '—');
+    setTxt('aq-time', (c.time || '').replace('T', ' ').slice(5, 16));
+    const wb = document.getElementById('wxb-aqi'); if (wb) { wb.textContent = (c.us_aqi != null ? Math.round(c.us_aqi) : '—') + ' ' + cat.label; wb.style.color = cat.color; }
+  } catch (e) { setTxt('aq-cat', 'unavailable'); }
+}
+
+// ── PurpleAir sensor overlay (toggle) ───────────────────────
+// Key-safe: the site reads a cached JSON (no API key in the page). AQ_ENDPOINT is the
+// Cloudflare Worker URL in production; falls back to a local snapshot for previewing.
+const AQ_ENDPOINT = 'https://hazard-aq.lunarcrush.workers.dev';
+const aqGrp = L.layerGroup();
+function pm25ToAQI(pm) {
+  const bp = [[0,12,0,50],[12.1,35.4,51,100],[35.5,55.4,101,150],[55.5,150.4,151,200],[150.5,250.4,201,300],[250.5,500.4,301,500]];
+  for (const [cl,ch,al,ah] of bp) if (pm<=ch) return Math.round((ah-al)/(ch-cl)*(Math.max(pm,cl)-cl)+al);
+  return 500;
+}
+async function loadSensors() {
+  try {
+    const bust = AQ_ENDPOINT.startsWith('http') ? '' : ('?t=' + Date.now());   // worker is edge-cached; local file gets a buster
+    const j = await (await fetch(AQ_ENDPOINT + bust)).json();
+    aqGrp.clearLayers();
+    (j.sensors||[]).forEach(([lat,lng,pm]) => {
+      const aqi = pm25ToAQI(pm), cat = aqiCat(aqi);
+      L.circleMarker([lat,lng], { radius:6, color:cat.color, weight:1, opacity:.9, fillColor:cat.color, fillOpacity:.55 })
+       .bindTooltip(`<b style="color:${cat.color}">AQI ${aqi} · ${cat.label}</b><br>PM2.5 ${pm} µg/m³ · live sensor`, {sticky:true})
+       .addTo(aqGrp);
+    });
+    const n = (j.sensors||[]).length, sw = document.getElementById('aq-sensors-n'); if (sw) sw.textContent = n ? n + ' sensors' : '—';
+  } catch (e) { /* endpoint not live yet — layer just stays empty */ }
+}
+
+// ── "Am I in the zone?" locator ─────────────────────────────
+let userLoc = null, userAQI = null;
+const youGrp = L.layerGroup().addTo(map);
+
+async function fetchUserAQI(lat, lng) {
+  userAQI = null;
+  try {
+    const u = 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + lat + '&longitude=' + lng + '&current=us_aqi,pm2_5';
+    const c = (await (await fetch(u)).json()).current || {};
+    userAQI = { aqi: c.us_aqi, pm: c.pm2_5 };
+  } catch (e) {}
+  renderVerdict();
+}
+
+function toggleZone() {
+  const open = document.getElementById('zonePanel').classList.toggle('open');
+  document.getElementById('zoneBtn').style.display = open ? 'none' : '';
+  // once a visitor has closed it, don't auto-pop again — it just lives as the top button
+  if (!open) { try { localStorage.setItem('hzs_zone_seen', '1'); } catch (e) {} }
+}
+function setZoneStatus(html) { document.getElementById('zp-result').innerHTML = html; }
+
+function locateMe() {
+  if (!navigator.geolocation) { setZoneStatus('<div class="verdict orange"><p>Location isn\'t available here. Try typing your address.</p></div>'); return; }
+  setZoneStatus('<p style="font-size:.74rem;color:var(--dim)">Locating…</p>');
+  navigator.geolocation.getCurrentPosition(
+    pos => checkLocation(pos.coords.latitude, pos.coords.longitude, 'your current location'),
+    err => setZoneStatus('<div class="verdict orange"><p>Couldn\'t get your location (' + (err.message || 'permission denied') + '). Try typing your address instead.</p></div>'),
+    { enableHighAccuracy:true, timeout:10000, maximumAge:60000 }
+  );
+}
+
+async function geocodeAddress() {
+  const q = document.getElementById('zp-addr').value.trim();
+  if (!q) return;
+  setZoneStatus('<p style="font-size:.74rem;color:var(--dim)">Searching…</p>');
+  try {
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us'
+      + '&viewbox=-118.20,33.90,-117.80,33.65&q=' + encodeURIComponent(q);
+    const j = await (await fetch(url, { headers:{ 'Accept':'application/json' } })).json();
+    if (!j.length) { setZoneStatus('<div class="verdict orange"><p>No match. Try adding the city, e.g. "…Garden Grove".</p></div>'); return; }
+    checkLocation(+j[0].lat, +j[0].lon, j[0].display_name.split(',').slice(0,2).join(','));
+  } catch (e) { setZoneStatus('<div class="verdict orange"><p>Lookup failed. Check your connection and try again.</p></div>'); }
+}
+
+function checkLocation(lat, lng, label) {
+  userLoc = { lat, lng, label };
+  youGrp.clearLayers();
+  L.marker([lat,lng], { icon: L.divIcon({ className:'', html:'<div class="you-dot"></div>', iconSize:[18,18], iconAnchor:[9,9] }), zIndexOffset:1000 })
+   .bindTooltip('You · ' + (label||'your location'), {direction:'top'}).addTo(youGrp);
+  L.polyline([[lat,lng], GKN], { color:'#36c2ff', weight:1.5, opacity:.6, dashArray:'5 5' }).addTo(youGrp);
+  try { map.fitBounds(L.latLngBounds([lat,lng], GKN).pad(0.4), { maxZoom:14 }); } catch(e) {}
+  renderVerdict();
+  fetchUserAQI(lat, lng);   // real air quality at the user's spot
+}
+
+function haversineM(a, b) { const R=6371000, t=Math.PI/180, dLat=(b[0]-a[0])*t, dLng=(b[1]-a[1])*t;
+  const s=Math.sin(dLat/2)**2 + Math.cos(a[0]*t)*Math.cos(b[0]*t)*Math.sin(dLng/2)**2; return 2*R*Math.asin(Math.sqrt(s)); }
+function bearingDeg(from, to) { const t=Math.PI/180, y=Math.sin((to[1]-from[1])*t)*Math.cos(to[0]*t),
+  x=Math.cos(from[0]*t)*Math.sin(to[0]*t)-Math.sin(from[0]*t)*Math.cos(to[0]*t)*Math.cos((to[1]-from[1])*t);
+  return (Math.atan2(y,x)*180/Math.PI+360)%360; }
+function pointInPoly(pt, poly) { let inside=false;
+  for (let i=0,j=poly.length-1; i<poly.length; j=i++) { const yi=poly[i][0],xi=poly[i][1],yj=poly[j][0],xj=poly[j][1];
+    if (((yi>pt[0])!==(yj>pt[0])) && (pt[1] < (xj-xi)*(pt[0]-yi)/(yj-yi)+xi)) inside=!inside; } return inside; }
+
+function renderVerdict() {
+  if (!userLoc || !lastBlast || !lastPlume) return;
+  const u=[userLoc.lat,userLoc.lng], b=lastBlast;
+  const dist=haversineM(GKN,u), brg=bearingDeg(GKN,u);
+  const inEvac=pointInPoly(u, EVAC_BOX);
+  const inPlume = state.plume && pointInPoly(u, buildPlumePoly(lastPlume.erpg1, 22));
+  let blast=null;
+  if (dist<=b.fireball) blast='fireball'; else if (dist<=b.severe) blast='severe damage';
+  else if (dist<=b.moderate) blast='moderate damage'; else if (dist<=b.glass) blast='glass-break';
+  let d=Math.abs(brg-WIND_BEARING)%360; if (d>180) d=360-d; const downwind=d<=55;
+  let cls, head, msg;
+  if (blast==='fireball' || blast==='severe damage') { cls='red'; head='Get out now'; msg='You are inside the modeled severe-blast zone, the most dangerous area. Leave immediately and follow emergency services.'; }
+  else if (inEvac) { cls='red'; head="You're in the evacuation zone"; msg='Your location is inside the official evacuation order. If you are still there, leave when safe and follow official instructions.'; }
+  else if (inPlume) { cls='orange'; head="You're in the plume path"; msg='The modeled toxic plume is blowing over your location right now (toward ' + compass(WIND_BEARING) + '). Go indoors, close windows, turn off any AC pulling in outside air, or move ' + compass((WIND_BEARING+180)%360) + ' (upwind).'; }
+  else if (blast) { cls='orange'; head='Within the ' + blast + ' radius'; msg='You are within the modeled ' + blast + ' radius. Stay alert and be ready to move.'; }
+  else if (downwind) { cls='orange'; head='Downwind, just outside the plume'; msg='You are downwind but outside the modeled plume edge. If the wind picks up or the release grows, this can change. Stay ready.'; }
+  else { cls='green'; head='You look clear right now'; msg='You are outside the evacuation order and the modeled plume, and ' + (d>125?'upwind':'crosswind') + ' of the current wind. Conditions can shift, so keep checking official updates.'; }
+  const mi=(dist/1609).toFixed(2);
+  setZoneStatus(
+    '<div class="verdict ' + cls + '"><h4>' + head + '</h4><p>' + msg + '</p></div>' +
+    '<ul class="zp-facts">' +
+    '<li><span class="k">Evac order</span><span class="v">' + (inEvac?'⚠ inside':'outside') + '</span></li>' +
+    '<li><span class="k">Plume now</span><span class="v">' + (inPlume?'⚠ in the path':(state.plume?'clear':'—')) + '</span></li>' +
+    '<li><span class="k">Blast zone</span><span class="v">' + (blast?'⚠ '+blast:'outside all') + '</span></li>' +
+    '<li><span class="k">From tank</span><span class="v">' + mi + ' mi ' + compass(brg) + '</span></li>' +
+    '<li><span class="k">Wind</span><span class="v">' + (downwind?'downwind (in path)':'upwind / crosswind') + '</span></li>' +
+    (userAQI && userAQI.aqi != null
+      ? '<li><span class="k">Air near you</span><span class="v" style="color:' + aqiCat(userAQI.aqi).color + '">AQI ' + Math.round(userAQI.aqi) + ' · ' + aqiCat(userAQI.aqi).label + '</span></li>'
+      : '') +
+    '</ul>'
+  );
+}
+
 // ── init ───────────────────────────────────────────────────
 onSlide();
 loadWeather();
-setInterval(loadWeather, 10 * 60 * 1000);      // refresh obs + hourly series every 10 min
+setInterval(loadWeather, 90 * 1000);           // refresh obs + hourly series ~every 90s
+loadAirQuality();
+setInterval(loadAirQuality, 90 * 1000);        // refresh live AQI ~every 90s
+setInterval(() => { if (state.aq) loadSensors(); }, 90 * 1000);   // refresh PurpleAir sensors when the layer is on
 if (location.hash === '#explain') openExplain(false);   // honor a shared deep link on load
+// First-time visitors are greeted with the location check; after they close it once,
+// it stays as the prominent top button (remembered via localStorage).
+let zoneSeen = true;
+try { zoneSeen = !!localStorage.getItem('hzs_zone_seen'); } catch (e) {}
+if (!zoneSeen && location.hash !== '#explain') {
+  setTimeout(() => { if (!document.getElementById('zonePanel').classList.contains('open')) toggleZone(); }, 650);
+}
 
 // Force Leaflet to recalculate size after layout settles
 setTimeout(() => { map.invalidateSize(); }, 100);
