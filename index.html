@@ -73,6 +73,10 @@
   .sw.on::after { left:17px; }
   .dot9 { width:9px;height:9px;border-radius:2px;flex-shrink:0; }
 
+  /* model-comparison metric chips */
+  .mm { cursor:pointer; padding:2px 9px; border:1px solid var(--border); border-radius:3px; color:var(--dim); user-select:none; }
+  .mm.on { background:#2a6fff; color:#fff; border-color:#2a6fff; }
+
   /* sliders */
   .sl-row { margin-bottom:6px; }
   .sl-row label { display:flex; justify-content:space-between; font-size:.67rem; color:var(--dim); margin-bottom:2px; }
@@ -271,8 +275,8 @@
       <div>
         <div class="sec">Scenario</div>
         <div class="sl-row">
-          <label>VCE efficiency <span id="lbl-eff">3%</span></label>
-          <input type="range" min="1" max="10" value="3" id="sl-eff" oninput="onSlide()">
+          <label>VCE efficiency <span id="lbl-eff">10%</span></label>
+          <input type="range" min="1" max="10" value="10" id="sl-eff" oninput="onSlide()">
         </div>
         <div class="sl-row">
           <label>Wind speed (mph) <span id="lbl-wind">8</span></label>
@@ -282,6 +286,30 @@
           <label>Volume (gal) <span id="lbl-vol">7,000</span></label>
           <input type="range" min="1000" max="34000" value="7000" id="sl-vol" oninput="onSlide()">
         </div>
+        <div class="sl-row">
+          <label>Leak rate (kg/s) <span id="lbl-leak">40</span></label>
+          <input type="range" min="1" max="40" value="40" step="1" id="sl-leak" oninput="onSlide()">
+        </div>
+        <div style="font-size:.57rem;color:var(--dim);margin-top:-2px;margin-bottom:4px;line-height:1.35;">
+          Per-tank evaporation/venting rate that feeds the plume. Realistic MMA pool ≈ 2–8 kg/s.
+          <b>The dominant lever on plume reach.</b> Each cascade tank below adds another source this size.
+        </div>
+        <style>
+          .seg{display:flex;gap:4px;margin-top:2px;}
+          .seg-btn{flex:1;font-family:'Share Tech Mono',monospace;font-size:.58rem;cursor:pointer;
+            padding:5px 3px;border-radius:5px;background:rgba(255,255,255,.04);
+            border:1px solid rgba(255,255,255,.12);color:var(--dim);transition:all .15s;}
+          .seg-btn.on{background:rgba(95,201,184,.18);border-color:#5fc9b8;color:#cdeee7;}
+          .seg-btn:hover{border-color:#5fc9b8;}
+        </style>
+        <div class="tog-label" style="padding-top:4px;"><span class="dot9" style="background:#5fc9b8"></span>Plume dispersion model</div>
+        <div class="seg" id="seg-plume">
+          <button class="seg-btn on" id="pm-bm"       onclick="setPlumeModel('bm')">Dense-gas (B-M)</button>
+          <button class="seg-btn"    id="pm-degadis"  onclick="setPlumeModel('degadis')">DEGADIS<br>(two-phase)</button>
+        </div>
+        <div style="font-size:.57rem;color:var(--dim);margin-top:4px;line-height:1.35;" id="pm-desc">
+          <b>Britter-McQuaid</b> — screening dense-gas model. Heavier-than-air vapour slumps and hugs the ground, reaching farther than a neutral plume. The default for MMA. ±factor 2-3.
+        </div>
       </div>
 
       <div>
@@ -289,20 +317,21 @@
         <div style="font-size:.62rem;color:var(--dim);margin-bottom:6px;line-height:1.4;">
           Officials say the tank sits beside <b>2 other storage tanks</b>. A blast can trigger
           sympathetic detonation. Toggle the neighbours (worst case: 34,000 gal each, full).
-          Cascade grows the <b>blast</b> (combined fuel detonates); the toxic plume stays the
-          primary tank's leak.
+          Cascade grows the <b>blast</b> (combined fuel) <b>and the plume</b> — each failing
+          tank adds another leak of the rate set above.
         </div>
         <div class="tog-row" onclick="tog('t2')">
           <span class="tog-label"><span class="dot9" style="background:#ff5500"></span>Tank 2 (+34,000 gal)</span>
-          <div class="sw" id="sw-t2"></div>
+          <div class="sw on" id="sw-t2"></div>
         </div>
         <div class="tog-row" onclick="tog('t3')">
           <span class="tog-label"><span class="dot9" style="background:#ff5500"></span>Tank 3 (+34,000 gal)</span>
-          <div class="sw" id="sw-t3"></div>
+          <div class="sw on" id="sw-t3"></div>
         </div>
         <div class="row" style="margin-top:5px;"><span class="lbl">Total volume</span><span class="val c" id="s-totalvol">7,000 gal</span></div>
         <div class="row"><span class="lbl">Scenario</span><span class="val c" id="s-scenario">Single tank</span></div>
         <div class="row"><span class="lbl">Blast scale</span><span class="val c" id="s-scale">—</span></div>
+        <div class="row"><span class="lbl">Plume source</span><span class="val w" id="s-plumeq">4 kg/s</span></div>
         <div style="font-size:.57rem;color:var(--dim);margin-top:4px;line-height:1.35;">TNT-equivalent = blast energy only (not radiation/fallout).</div>
       </div>
 
@@ -315,7 +344,7 @@
       </div>
 
       <div>
-        <div class="sec">Plume legend (modeled)</div>
+        <div class="sec" id="plume-leg-title">Plume legend (Britter-McQuaid dense-gas)</div>
         <div class="leg"><div class="leg-sw" style="background:#ff2a2a"></div>IDLH &gt;1,000 ppm — lethal</div>
         <div class="leg"><div class="leg-sw" style="background:#ff7300"></div>ERPG-2 75 ppm — serious</div>
         <div class="leg"><div class="leg-sw" style="background:#ffd000"></div>ERPG-1 10 ppm — irritation</div>
@@ -330,6 +359,32 @@
         <div class="row"><span class="lbl">IDLH plume</span><span class="val c" id="d-id">—</span></div>
         <div class="row"><span class="lbl">ERPG-2</span><span class="val w" id="d-e2">—</span></div>
         <div class="row"><span class="lbl">ERPG-1</span><span class="val" id="d-e1">—</span></div>
+      </div>
+
+      <div>
+        <div class="sec">Model Comparison</div>
+        <div style="font-size:.6rem;color:var(--dim);margin-bottom:6px;line-height:1.4;">
+          Four models, each deriving the hazard from first principles (real API runs). <b style="color:#d6a36a">Claude</b>
+          is the interactive default (on); toggle any model to overlay its blast + plume, in its colour.
+          Cascade scales the blast; the leak-rate slider scales the plume. Plume follows the dispersion model picked above (B-M / DEGADIS) — screening-level, ±factor 2–3.
+        </div>
+        <div class="tog-row" onclick="togModel('claude')">
+          <span class="tog-label"><span class="dot9" style="background:#d6a36a"></span>Claude · 7.1 t</span>
+          <div class="sw" id="sw-m-claude"></div>
+        </div>
+        <div class="tog-row" onclick="togModel('grok')">
+          <span class="tog-label"><span class="dot9" style="background:#8ab4ff"></span>Grok 4 · 7.2 t</span>
+          <div class="sw" id="sw-m-grok"></div>
+        </div>
+        <div class="tog-row" onclick="togModel('gemini')">
+          <span class="tog-label"><span class="dot9" style="background:#b39af5"></span>Gemini 2.5 Pro · 4.3 t</span>
+          <div class="sw" id="sw-m-gemini"></div>
+        </div>
+        <div class="tog-row" onclick="togModel('openai')">
+          <span class="tog-label"><span class="dot9" style="background:#10a37f"></span>GPT-5 · 14.3 t <span style="color:var(--dim)">(default)</span></span>
+          <div class="sw on" id="sw-m-openai"></div>
+        </div>
+        <div id="m-detail" style="font-size:.58rem;color:var(--dim);margin-top:5px;line-height:1.4;display:none;"></div>
       </div>
 
       <div>
@@ -417,9 +472,130 @@ L.marker(GKN, {icon:gknIcon, zIndexOffset:1000})
 const blastGrp = L.layerGroup().addTo(map);
 const plumeGrp = L.layerGroup().addTo(map);
 const evacGrp  = L.layerGroup().addTo(map);
+const modelGrp = L.layerGroup().addTo(map);
+
+// ── multi-model blast comparison ───────────────────────────
+// Each model's OWN first-principles estimate for the real single tank (~7,000 gal
+// MMA). Radii in metres, centred on the site; overlay-able for side-by-side compare.
+// Only 'claude' is a real run so far — Grok/Gemini/OpenAI fill in once we can call them.
+// Each model's OWN first-principles run (real API calls, 2026-05-23). TNT in tonnes,
+// radii in metres. The spread (4.3–14.3 t) comes from each model's chosen VCE yield.
+const MODELS = {
+  claude: { name:'Claude',         color:'#d6a36a', ready:true, tnt:7.1,  yld:5,
+    r:{ fireball:19, severe:81, moderate:183, glass:328 },
+    method:'24,905 kg MMA × 26.4 MJ/kg × 5% VCE yield ÷ 4.6 = 7.1 t TNT-eq; Hopkinson-Cranz radii for ~10/3/1 psi + fireball.',
+    p:{ idlh:230, erpg2:850, erpg1:3000 },
+    pg:{ idlh:55, erpg2:200, erpg1:600 },
+    pdeg:{ idlh:175, erpg2:680, erpg1:2400 },
+    pm:'Britter-McQuaid dense-gas; ~4 kg/s pool evaporation (vp 5.1 kPa, 3.6 m/s wind), no flash, Pasquill D. DEGADIS: gravity slump → Gaussian handoff at Ri_b~0.1 (~3.5 kg/s, transition ~140 m).' },
+  grok:   { name:'Grok 4',         color:'#8ab4ff', ready:true, tnt:7.15, yld:5,
+    r:{ fireball:39, severe:77, moderate:193, glass:386 },
+    method:'mass = 7000·3.785·0.94; 5% VCE yield (unconfined); scaled distance Z = 2/4/10/20 m·kg^-⅓ for ~20/10/3/1 psi.',
+    p:{ idlh:250, erpg2:900, erpg1:3200 },
+    pg:{ idlh:63, erpg2:231, erpg1:652 },
+    pdeg:{ idlh:180, erpg2:720, erpg1:2650 },
+    pm:'Britter-McQuaid dense-gas; 7,000-gal evap pool ~4 kg/s for 90 min, 0 flash, Pasquill D, 3.6 m/s urban. DEGADIS: 2-phase slump→Gaussian, Ri_b=0.1 handoff at ~135 m (~2.1 kg/s).' },
+  gemini: { name:'Gemini 2.5 Pro', color:'#b39af5', ready:true, tnt:4.29, yld:3,
+    r:{ fireball:41, severe:68, moderate:136, glass:309 },
+    method:'TNT-equivalence; 3% VCE yield (moderate congestion); Hopkinson-Cranz Z·W^⅓ for surface-burst overpressures.',
+    p:{ idlh:30, erpg2:111, erpg1:303 },
+    pg:{ idlh:47, erpg2:181, erpg1:547 },
+    pdeg:{ idlh:65, erpg2:520, erpg1:1100 },
+    pm:'Britter-McQuaid dense gas; continuous evaporation from a thin pool, no flashing, steady 8 mph (D). DEGADIS/SLAB: larger ~6 kg/s pool source, transition ~400 m.' },
+  openai: { name:'GPT-5',          color:'#10a37f', ready:true, tnt:14.3, yld:10,
+    r:{ fireball:0, severe:97, moderate:170, glass:340 },
+    method:'10% VCE yield; Z = 4/7/14 for 10/3/1 psi. Notes a VCE has no sustained fireball (0 m).',
+    p:{ idlh:400, erpg2:1800, erpg1:6000 },
+    pg:{ idlh:34, erpg2:129, erpg1:393 },
+    pdeg:{ idlh:27, erpg2:95, erpg1:260 },
+    pm:'CCPS dense-gas screening; fast 10-min evaporative pool from 7,000 gal; urban Pasquill D, 3.6 m/s; mass^⅓ scaling. DEGADIS: ~5 kg/s pool, slump→Gaussian handoff at Ri_b~0.1 (~200 m) — dilutes hard in the passive phase.' },
+};
+// The PRIMARY model drives the main map (blast + plume + the Distances readout); the
+// other three draw as colour-coded overlays. Default primary = GPT-5.
+const modelState = { claude:false, grok:false, gemini:false, openai:false };
+
+function togModel(key) {
+  if (key === state.primaryModel) {
+    // Primary model = the interactive default map = the main blast + plume layers.
+    const on = !document.getElementById('sw-m-'+key).classList.contains('on');
+    document.getElementById('sw-m-'+key).classList.toggle('on', on);
+    state.blast = on; state.plume = on;
+    document.getElementById('sw-blast').classList.toggle('on', on);
+    document.getElementById('sw-plume').classList.toggle('on', on);
+    onSlide();
+    return;
+  }
+  const m = MODELS[key];
+  if (!m || !m.ready) return;
+  modelState[key] = !modelState[key];
+  document.getElementById('sw-m-'+key).classList.toggle('on', modelState[key]);
+  drawModels();
+}
+// Each active model shows its FULL estimate at once — blast rings + downwind plume
+// cone, in the model's colour. The cascade tanks (Tank 2/3) scale each model's blast
+// (TNT ∝ volume, radius ∝ vol^⅓); the plume tracks the primary tank (detonation
+// combusts the cascade fuel), matching the main sim's cascade logic.
+function drawModels() {
+  modelGrp.clearLayers();
+  const vol = +document.getElementById('sl-vol').value;
+  const leak = +document.getElementById('sl-leak').value;
+  const wind = +document.getElementById('sl-wind').value;
+  const nTanks = 1 + (state.t2 ? 1 : 0) + (state.t3 ? 1 : 0);
+  const totalVol = vol + (state.t2 ? 34000 : 0) + (state.t3 ? 34000 : 0);
+  const bFac = Math.pow(totalVol/7000, 1/3);     // blast radius scale (model TNT ∝ volume)
+  const pFac = Math.pow((leak*nTanks)/Q0, 0.5) * Math.pow(8/Math.max(wind,2), 0.3);  // plume: per-tank rate × failing tanks, weak inverse-wind
+  // Overlays = every model EXCEPT the primary (which is already the main map).
+  const active = Object.keys(MODELS).filter(k => k !== state.primaryModel && MODELS[k].ready && modelState[k]);
+  active.forEach(k => {
+    const m = MODELS[k];
+    const tnt = m.tnt * (totalVol/7000);
+    // Blast rings — filled with graduated opacity (same style as the main blast), model colour.
+    [['Fireball',m.r.fireball,.28],['Severe',m.r.severe,.17],['Moderate',m.r.moderate,.10],['Glass-break',m.r.glass,.05]].forEach(([lvl,r,op]) => {
+      if (!r || r <= 0) return;   // GPT-5 reports no fireball for a VCE
+      L.circle(GKN, { radius:r*bFac, color:m.color, weight:1.4, opacity:.8, fillColor:m.color, fillOpacity:op, dashArray:'4 4' })
+       .bindTooltip(`<b style="color:${m.color}">${m.name}</b> · blast ${tnt.toFixed(1)} t · ${lvl} ${miStr(r*bFac)}`, {sticky:true})
+       .addTo(modelGrp);
+    });
+    // Plume — pick the model's estimate for the active scenario (dense-gas vs Gaussian),
+    // drawn with filled isopleths + ppm tip labels, exactly like the main plume.
+    const pd = state.plumeModel === 'bm' ? m.p
+             : state.plumeModel === 'degadis' ? (m.pdeg || m.p)
+             : (m.pg || m.p);
+    if (pd) {
+      [['ERPG-1','10 ppm',pd.erpg1,22,.10],['ERPG-2','75 ppm',pd.erpg2,17,.18],['IDLH','1,000 ppm',pd.idlh,12,.30]].forEach(([lvl,ppm,dist,ang,op]) => {
+        L.polygon(buildPlumePoly(dist*pFac, ang), { color:m.color, weight:1.4, opacity:.75, fillColor:m.color, fillOpacity:op })
+         .bindTooltip(`<b style="color:${m.color}">${m.name}</b> · ${lvl} (${ppm}) · ${miStr(dist*pFac)}`, {sticky:true})
+         .addTo(modelGrp);
+        L.marker(destPt(GKN[0], GKN[1], WIND_BEARING, dist*pFac), { interactive:false, icon: L.divIcon({ className:'', iconAnchor:[0,0],
+          html:`<div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:${m.color};background:rgba(10,12,15,.8);padding:1px 3px;border:1px solid ${m.color}55;border-radius:3px;white-space:nowrap;">${m.name} ${ppm}</div>` }) }).addTo(modelGrp);
+      });
+    }
+  });
+  const d = document.getElementById('m-detail');
+  if (active.length) {
+    d.style.display = '';
+    d.innerHTML = active.map(k => { const m = MODELS[k]; const pd = state.plumeModel==='bm' ? m.p : state.plumeModel==='degadis' ? (m.pdeg||m.p) : (m.pg||m.p);
+      return `<b style="color:${m.color}">${m.name}</b> — blast <b>${(m.tnt*totalVol/7000).toFixed(1)} t</b>, plume ERPG-2 <b>${pd ? miStr(pd.erpg2*pFac) : '—'}</b>`;
+    }).join('<br>');
+  } else { d.style.display = 'none'; }
+}
 
 // ── layer state ────────────────────────────────────────────
-const state = { basemap:true, blast:true, plume:true, evac:true, t2:false, t3:false };
+const state = { basemap:true, blast:true, plume:true, evac:true, t2:true, t3:true, plumeModel:'bm', primaryModel:'openai' };
+
+// Plume dispersion model selector (mutually exclusive): B-M / DEGADIS / neutral Gaussian.
+const PM_DESC = {
+  bm: '<b>Britter-McQuaid</b> — screening dense-gas model. Heavier-than-air vapour slumps and hugs the ground, reaching farther than a neutral plume. The default for MMA. ±factor 2-3.',
+  degadis: '<b>DEGADIS</b> — two-phase dense-gas model (US EPA / Coast Guard). Gravity-driven slumping near the source, then hands off to a passive Gaussian once the cloud dilutes (bulk Richardson number ~0.1). The most physically complete of the three.',
+  gaussian: '<b>Neutral Gaussian</b> — treats the vapour as passive: it lofts and dilutes, giving the tightest footprint. Understates a dense gas like MMA — shown for comparison.'
+};
+const PM_LEG = { bm:'Plume legend (dense-gas, B-M)', degadis:'Plume legend (DEGADIS two-phase)', gaussian:'Plume legend (neutral Gaussian)' };
+function setPlumeModel(m) {
+  state.plumeModel = m;
+  ['bm','degadis'].forEach(k => document.getElementById('pm-'+k).classList.toggle('on', k===m));
+  document.getElementById('pm-desc').innerHTML = PM_DESC[m];
+  onSlide();   // recompute main plume + model overlays
+}
 
 function tog(name) {
   state[name] = !state[name];
@@ -429,7 +605,7 @@ function tog(name) {
     map.getContainer().classList.toggle('tiles-off', !state[name]);
     return;
   }
-  if (name === 't2' || name === 't3') { onSlide(); return; }   // cascade tanks → recompute blast
+  if (name === 't2' || name === 't3') { onSlide(); return; }   // recompute blast + plume + models
   const grp = name==='blast' ? blastGrp : name==='plume' ? plumeGrp : evacGrp;
   if (state[name]) map.addLayer(grp); else map.removeLayer(grp);
 }
@@ -521,6 +697,42 @@ function calcPlume(volGal, windMph) {
     erpg2: findX(75   * 100/24450),
     erpg1: findX(10   * 100/24450),
   };
+}
+
+// Plume reach is set by the SOURCE RATE (how fast MMA vapour is fed to the cloud),
+// not the tank's total volume. Q0 is the baseline evaporation rate (kg/s) the model
+// distances below are anchored to; the leak-rate slider scales every plume off it.
+// Distance ∝ Q^~0.5 because the Gaussian σ-terms grow with downwind distance, so
+// even a huge source only stretches the footprint modestly — which is exactly why the
+// old code's bug (treating the entire ~6,200 kg inventory as a per-second rate, ~1,500×
+// too high) blew the plume out to ~6 mi instead of the real ~0.1–0.5 mi.
+const Q0 = 4;   // kg/s — anchor evaporation rate for the consensus distances
+
+// Britter-McQuaid dense-gas plume. Anchored to the 4-model consensus at Q0 / 8 mph
+// (IDLH 250 m, ERPG-2 900 m, ERPG-1 3.0 km). Heavier-than-air MMA hugs the ground and
+// resists vertical mixing, so this reaches the FARTHEST of the three at a given rate.
+function calcPlumeBM(Q, windMph) {
+  const f = Math.pow(Q/Q0, 0.5) * Math.pow(8/Math.max(windMph,2), 0.3);
+  return { idlh:250*f, erpg2:900*f, erpg1:3000*f };
+}
+
+// Proper neutral-buoyancy Gaussian plume — anchored to the models' Gaussian consensus
+// at Q0 / 8 mph (IDLH ~55 m, ERPG-2 ~200 m, ERPG-1 ~600 m). Smallest footprint because
+// a neutral plume lofts and dilutes in all directions instead of hugging the ground.
+function calcPlumeGaussian(Q, windMph) {
+  const f = Math.pow(Q/Q0, 0.56) * Math.pow(8/Math.max(windMph,2), 0.4);
+  return { idlh:55*f, erpg2:200*f, erpg1:600*f };
+}
+
+// DEGADIS two-phase dense-gas model (US EPA / US Coast Guard). The cloud first
+// spreads under gravity (slumping phase, vertical mixing suppressed), then once the
+// bulk Richardson number falls below ~0.1 it has entrained enough air to behave as a
+// passive Gaussian plume from a flattened "virtual source". The gravity phase still
+// dominates the near field, so DEGADIS lands BETWEEN B-M and neutral Gaussian. Anchored
+// to the 4-model DEGADIS consensus at Q0 / 8 mph (IDLH ~180 m, ERPG-2 ~680 m, ERPG-1 ~2.4 km).
+function calcPlumeDEGADIS(Q, windMph) {
+  const f = Math.pow(Q/Q0, 0.53) * Math.pow(8/Math.max(windMph,2), 0.3);
+  return { idlh:180*f, erpg2:680*f, erpg1:2400*f };
 }
 
 // ── draw ───────────────────────────────────────────────────
@@ -667,32 +879,45 @@ function onSlide() {
   const eff  = +document.getElementById('sl-eff').value;
   const wind = +document.getElementById('sl-wind').value;
   const vol  = +document.getElementById('sl-vol').value;
+  const leak = +document.getElementById('sl-leak').value;
 
   document.getElementById('lbl-eff').textContent  = eff+'%';
   document.getElementById('lbl-wind').textContent = wind;
   document.getElementById('lbl-vol').textContent  = Math.round(vol).toLocaleString();
+  document.getElementById('lbl-leak').textContent = leak;
   document.getElementById('s-vol').textContent    = Math.round(vol).toLocaleString()+' gal';
   document.getElementById('s-wspd').textContent   = wind+' mph';
   document.getElementById('wb-spd').textContent   = wind+' mph';
 
-  // Cascade: each adjacent tank adds 34,000 gal (worst case, full) to the blast.
-  // Cascade: each adjacent tank adds 34,000 gal (worst case, full) of FUEL to the
-  // blast. A sympathetic detonation combusts the MMA, so it drives a much larger
-  // BLAST — not a proportionally larger toxic cloud. The plume therefore stays the
-  // primary tank's leak/spill release (the alternative, non-detonation outcome).
+  // Cascade worst case: each adjacent tank adds 34,000 gal (full). Both the blast
+  // (all tanks detonate) and the toxic plume (all tanks release) scale with the
+  // combined volume. The B-M dense-gas option keeps the scaled plume realistic;
+  // turning it off shows the (overstated) neutral-Gaussian plume for comparison.
   const nTanks = 1 + (state.t2 ? 1 : 0) + (state.t3 ? 1 : 0);
   const totalVol = vol + (state.t2 ? 34000 : 0) + (state.t3 ? 34000 : 0);
   const b = calcBlast(totalVol, eff);
-  const p = calcPlume(vol, wind);
+  // Plume is driven by the LEAK RATE (kg/s) per tank. Each involved tank in a cascade
+  // adds another source of that size, so the effective release scales with how many
+  // tanks are failing — both the blast AND the plume grow with the cascade. The main
+  // plume shows the PRIMARY model's dense-gas / DEGADIS estimate, scaled off its
+  // 4 kg/s / 8 mph anchor (distance ~ Q^0.5, weak inverse-wind).
+  const srcQ = leak * nTanks;
+  const pm = MODELS[state.primaryModel];
+  const anchor = state.plumeModel === 'degadis' ? (pm.pdeg || pm.p) : pm.p;
+  const pFac = Math.pow(srcQ/Q0, 0.5) * Math.pow(8/Math.max(wind,2), 0.3);
+  const p = { idlh: anchor.idlh*pFac, erpg2: anchor.erpg2*pFac, erpg1: anchor.erpg1*pFac };
   document.getElementById('s-scenario').textContent = nTanks === 1 ? 'Single tank' : `CASCADE — ${nTanks} tanks`;
   document.getElementById('s-totalvol').textContent = Math.round(totalVol).toLocaleString()+' gal';
   document.getElementById('s-scale').textContent = tntScale(b.tntMT);
+  document.getElementById('s-plumeq').textContent = srcQ + ' kg/s' + (nTanks > 1 ? ` (${nTanks} × ${leak})` : '');
+  document.getElementById('plume-leg-title').textContent = PM_LEG[state.plumeModel];
 
   updateUI(b, p);
   if (nTanks > 1) document.getElementById('s-tnt').textContent += ' ⚠';
   if (state.blast) drawBlast(b); else blastGrp.clearLayers();
   if (state.plume) drawPlume(p); else plumeGrp.clearLayers();
   if (state.evac)  drawEvac();   else evacGrp.clearLayers();
+  drawModels();   // model overlays track the cascade tanks + volume
 }
 
 // ── mobile drawer ──────────────────────────────────────────
@@ -741,7 +966,7 @@ async function loadWeather() {
     const u = 'https://api.open-meteo.com/v1/forecast?latitude=33.7739&longitude=-117.9410'
       + '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m'
       + '&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m'
-      + '&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FLos_Angeles&past_days=2&forecast_days=1';
+      + '&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FLos_Angeles&past_days=2&forecast_days=2';
     const j = await (await fetch(u)).json();
     const c = j.current;
 
