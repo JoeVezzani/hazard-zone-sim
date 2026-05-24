@@ -2174,5 +2174,76 @@
    "news": "The authoritative written record (LA Times, Fox, NBC, CBS, NPR, USA Today, NY Post, HuffPost) \u2014 every major outlet now has a desk on it."
   },
   "as_of_note": "AI summary generated from live LunarCrush social data. Snapshot reflects the most recent 24\u201365h window ending at the timestamp above."
+ },
+ "methodology": {
+  "primary_topic": "garden grove",
+  "topics_tested": [
+   {
+    "term": "garden grove",
+    "status": "primary",
+    "posts": 3175,
+    "creators": 1997,
+    "int": 37798660,
+    "note": "The event's established LunarCrush topic \u2014 carries effectively all on-topic posts."
+   },
+   {
+    "term": "gkn aerospace",
+    "status": "empty",
+    "posts": 0,
+    "note": "Not an established topic \u2014 no indexed posts (company name alone)."
+   },
+   {
+    "term": "gkn",
+    "status": "empty",
+    "posts": 0,
+    "note": "Not an established topic."
+   },
+   {
+    "term": "methyl methacrylate / MMA tank",
+    "status": "empty",
+    "posts": 0,
+    "note": "Not an established topic."
+   },
+   {
+    "term": "hazmat",
+    "status": "generic",
+    "posts": 38,
+    "int": 5452036,
+    "note": "Generic hazmat topic \u2014 not event-specific, excluded to avoid noise."
+   }
+  ],
+  "networks": [
+   {
+    "label": "TikTok",
+    "posts": 560,
+    "int": 19071932
+   },
+   {
+    "label": "X / Twitter",
+    "posts": 2066,
+    "int": 11324811
+   },
+   {
+    "label": "YouTube",
+    "posts": 355,
+    "int": 6539515
+   },
+   {
+    "label": "Instagram",
+    "posts": 24,
+    "int": 680536
+   },
+   {
+    "label": "News",
+    "posts": 25,
+    "int": 98612
+   },
+   {
+    "label": "Reddit",
+    "posts": 145,
+    "int": 83254
+   }
+  ],
+  "note": "Counts reflect creators and posts LunarCrush indexes for the topic \u2014 a curated high-signal sample (top news clips, viral posts, official accounts), not every reply or view. \u201cCreators\u201d = unique original authors. \u201cInteractions\u201d = total public engagement (views, likes, comments, shares) on those posts \u2014 which is why ~2K creators map to tens of millions of interactions."
  }
 }

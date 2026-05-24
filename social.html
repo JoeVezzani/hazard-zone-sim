@@ -10,9 +10,15 @@
 <meta property="og:image" content="https://joevezzani.github.io/hazard-zone-sim/og.png?v=3">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:,">
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://api.fontshare.com/v2/css?f[]=butler@400,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
+  /* ── LunarCrush brand typeface: Fakt (self-hosted) ── */
+  @font-face{font-family:'Fakt';src:url('fonts/fakt-300.woff2') format('woff2');font-weight:300;font-style:normal;font-display:swap}
+  @font-face{font-family:'Fakt';src:url('fonts/fakt-400.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+  @font-face{font-family:'Fakt';src:url('fonts/fakt-500.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
+  @font-face{font-family:'Fakt';src:url('fonts/fakt-600.woff2') format('woff2');font-weight:600;font-style:normal;font-display:swap}
   :root{
     --canvas:#0F1A2A; --card:#0E1120; --card-hi:#152338; --surface:#1A1D2E; --footer:#060912;
     --t-head:#FFFFFF; --t-body:#A0A5B8; --t-muted:#6B7090; --t-subtle:#4A4E66;
@@ -25,11 +31,12 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
-  body{background:var(--canvas);color:var(--t-body);font-family:Figtree,system-ui,sans-serif;
+  body{background:var(--canvas);color:var(--t-body);font-family:'Fakt',system-ui,-apple-system,sans-serif;
     font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
   a{color:inherit;text-decoration:none}
   .wrap{max-width:1280px;margin:0 auto;padding:0 24px}
-  .butler{font-family:Butler,Figtree,serif;font-weight:700}
+  .butler{font-family:Butler,'Fakt',serif;font-weight:700}
+  .num{font-family:'Space Grotesk','Fakt',sans-serif;font-feature-settings:"tnum" 1;letter-spacing:-.5px}
   .grad{background:linear-gradient(90deg,var(--purple),var(--cyan));-webkit-background-clip:text;
     background-clip:text;-webkit-text-fill-color:transparent}
 
@@ -55,8 +62,10 @@
   header .sub{color:var(--t-muted);font-size:17px;max-width:640px;margin:14px auto 0}
   .topbar{display:flex;justify-content:space-between;align-items:center;padding:18px 0;
     position:relative;z-index:2}
-  .topbar .brand{font-weight:700;color:var(--t-head);letter-spacing:-.3px;font-size:15px;display:flex;align-items:center;gap:9px}
-  .topbar .brand .lc{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--purple),var(--cyan));display:inline-block}
+  .topbar .brand{display:flex;align-items:center;gap:10px}
+  .topbar .brand .pb{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--t-muted)}
+  .topbar .brand .lclogo{height:19px;width:auto;display:block;opacity:.95;transition:opacity .2s}
+  .topbar .brand:hover .lclogo{opacity:1}
   .backlink{color:var(--t-muted);font-size:13px;font-weight:500;padding:8px 16px;border:1px solid var(--surface);
     border-radius:10px;transition:.2s}
   .backlink:hover{border-color:var(--border-acc);color:var(--t-body)}
@@ -73,11 +82,26 @@
   .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:20px}
   .metric{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:26px 24px}
   .metric .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--t-muted);font-weight:600}
-  .metric .val{font-size:36px;line-height:1.15;font-weight:700;color:var(--t-head);margin-top:10px;letter-spacing:-.5px}
+  .metric .val{font-family:'Space Grotesk','Fakt',sans-serif;font-size:38px;line-height:1.15;font-weight:600;color:var(--t-head);margin-top:10px;letter-spacing:-1px}
   .metric .delta{display:inline-flex;align-items:center;gap:5px;margin-top:10px;font-size:12px;font-weight:600;
     padding:3px 10px;border-radius:9999px}
   .delta.up{background:var(--g-tint);color:var(--green)} .delta.neu{background:var(--surface);color:var(--t-muted)}
   .delta.dn{background:rgba(246,80,108,.1);color:var(--red)}
+  .metric-note{color:var(--t-muted);font-size:13px;line-height:1.6;margin-top:18px;max-width:880px}
+  .metric-note b{color:var(--t-body);font-weight:600}
+
+  /* keywords / methodology */
+  .kw-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:24px}
+  .kw-list{display:flex;flex-direction:column;gap:10px}
+  .kw{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+  .kw .term{font-family:'Space Grotesk','Fakt',monospace;color:var(--t-head);font-weight:600;font-size:14px;flex:1}
+  .kw .st{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:9999px;flex:none}
+  .st.primary{background:var(--g-tint);color:var(--green)} .st.empty{background:var(--surface);color:var(--t-subtle)} .st.generic{background:var(--a-tint);color:var(--amber)}
+  .kw .ct{font-size:12px;color:var(--t-muted);flex:none;width:96px;text-align:right;font-family:'Space Grotesk',sans-serif}
+  .kw-note{color:var(--t-muted);font-size:13.5px;line-height:1.65}
+  .kw-note b{color:var(--t-body)} .kw-note .term{font-family:'Space Grotesk',monospace;color:var(--purple-l);font-size:12.5px;background:var(--p-tint);padding:1px 7px;border-radius:5px}
+  .nets-scanned{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .nets-scanned .np{font-size:11.5px;font-weight:600;background:var(--surface);color:var(--t-body);padding:5px 11px;border-radius:9999px;border:1px solid var(--border-sub)}
 
   /* generic card */
   .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;box-shadow:var(--card-sh)}
@@ -126,7 +150,7 @@
   .chart-card h3{color:var(--t-head);font-size:18px;font-weight:600;margin-bottom:4px}
   .chart-card .cap{color:var(--t-muted);font-size:13px;margin-bottom:22px}
   svg{display:block;width:100%;overflow:visible}
-  .axis{fill:var(--t-subtle);font-size:10px;font-family:Figtree}
+  .axis{fill:var(--t-subtle);font-size:10px;font-family:'Space Grotesk','Fakt',sans-serif}
 
   /* network bars */
   .netrow{display:flex;align-items:center;gap:14px;margin-bottom:18px}
@@ -177,7 +201,7 @@
 <body>
 <div class="wrap">
   <div class="topbar">
-    <div class="brand"><span class="lc"></span> Powered by LunarCrush</div>
+    <a class="brand" href="https://lunarcrush.com" target="_blank" rel="noopener"><span class="pb">Powered by</span><img src="./lunarcrush-logo.svg" alt="LunarCrush" class="lclogo"></a>
     <a class="backlink" href="./index.html">← Back to the simulator</a>
   </div>
 </div>
@@ -195,6 +219,7 @@
 
 <footer>
   <div class="wrap">
+    <a href="https://lunarcrush.com" target="_blank" rel="noopener"><img src="./lunarcrush-logo.svg" alt="LunarCrush" style="height:26px;width:auto;opacity:.9;margin-bottom:14px"></a>
     <div class="pl">Social data via <a href="https://lunarcrush.com" target="_blank" rel="noopener">LunarCrush</a> · AI summaries generated from live post content · Companion to the <a href="./index.html">GKN Hazard Zone Simulator</a></div>
     <div class="cav">Aggregated from public posts across X, TikTok, YouTube, Instagram, Reddit and news wires. “Official” = verified government/emergency authorities and major news outlets indexed by LunarCrush; hyperlocal agency accounts (OCFA, OC Sheriff, city) may not be tracked. Interaction counts are platform-reported. This is a situational-awareness aid, not an emergency source — follow official evacuation orders.</div>
   </div>
@@ -281,12 +306,15 @@ function render(d){
   let h='';
 
   // ── METRICS ──
+  const perCreator = s.num_contributors ? Math.round(s.interactions_24h/s.num_contributors) : 0;
   h+=`<div class="wrap"><div class="metrics">
-    <div class="metric"><div class="lbl">Interactions · 24h</div><div class="val">${fmt(s.interactions_24h)}</div><span class="delta up">▲ trending ${s.trend||'up'}</span></div>
-    <div class="metric"><div class="lbl">People talking</div><div class="val">${fmt(s.num_contributors)}</div><span class="delta neu">contributors</span></div>
+    <div class="metric"><div class="lbl">Engagement · 24h</div><div class="val">${fmt(s.interactions_24h)}</div><span class="delta up">▲ trending ${s.trend||'up'}</span></div>
+    <div class="metric"><div class="lbl">Creators posting</div><div class="val">${fmt(s.num_contributors)}</div><span class="delta neu">unique authors</span></div>
     <div class="metric"><div class="lbl">Posts tracked</div><div class="val">${fmt(s.num_posts)}</div><span class="delta neu">${d.by_network.length} networks</span></div>
-    <div class="metric"><div class="lbl">Official posts</div><div class="val">${d.counts.gov+d.counts.news}</div><span class="delta neu">${d.counts.community} community</span></div>
-  </div></div>`;
+    <div class="metric"><div class="lbl">Reach per creator</div><div class="val">${fmt(perCreator)}</div><span class="delta neu">interactions each</span></div>
+  </div>
+  <p class="metric-note">~${fmt(s.num_contributors)} creators are <b>posting</b>; their posts drew <b>${fmt(s.interactions_24h)} interactions</b> (views, likes, comments, shares) — so a small group of authors is reaching tens of millions. Counts reflect the high-signal posts LunarCrush indexes for the <b>${esc(d.title)}</b> topic, not every reply.</p>
+  </div>`;
 
   // ── AI STATUS ──
   h+=`<section><div class="wrap"><div class="ai-hero">
@@ -362,6 +390,29 @@ function render(d){
       <div class="de">${esc(n.desc)}</div>
     </a>`).join('')}</div>
   </div></section>`;
+
+  // ── TOPICS & KEYWORDS TRACKED (methodology) ──
+  const m=d.methodology;
+  if(m){
+    h+=`<section><div class="wrap">
+      <div class="sec-head"><span class="pill"><span class="dot"></span> What we tracked</span>
+        <h2>Topics &amp; keywords</h2><p>How this dashboard is sourced — and why a focused author count maps to massive reach.</p></div>
+      <div class="card"><div class="kw-grid">
+        <div>
+          <div class="kw-list">${m.topics_tested.map(t=>`<div class="kw">
+            <span class="term">${esc(t.term)}</span>
+            <span class="ct">${t.posts?fmt(t.posts)+' posts':'—'}</span>
+            <span class="st ${t.status}">${t.status}</span>
+          </div>`).join('')}</div>
+          <div class="nets-scanned">${m.networks.map(n=>`<span class="np">${esc(n.label)} · ${fmt(n.posts)}</span>`).join('')}</div>
+        </div>
+        <div class="kw-note">
+          <p>LunarCrush indexes social activity by <b>topic</b>. The event lives almost entirely under the <span class="term">garden grove</span> topic — company-name terms like <span class="term">gkn aerospace</span> aren’t established topics and return nothing, while <span class="term">hazmat</span> is too generic to be event-specific.</p>
+          <p style="margin-top:14px">${esc(m.note)}</p>
+        </div>
+      </div></div>
+    </div></section>`;
+  }
 
   document.getElementById('app').innerHTML=h;
 
