@@ -7,8 +7,9 @@
 <meta name="description" content="Live social-media intelligence on the GKN Aerospace MMA chemical-tank crisis in Garden Grove, CA. AI summaries, official vs community sources, and how the story is spreading across networks. Powered by LunarCrush.">
 <meta property="og:title" content="Garden Grove Crisis — Live Social Intelligence">
 <meta property="og:description" content="How the GKN Aerospace chemical-tank emergency is propagating across X, TikTok, YouTube, Reddit & news. Official vs community, AI summaries, live charts.">
-<meta property="og:image" content="https://joevezzani.github.io/hazard-zone-sim/og.png?v=3">
+<meta property="og:image" content="https://joevezzani.github.io/hazard-zone-sim/social-og.png?v=1">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://joevezzani.github.io/hazard-zone-sim/social-og.png?v=1">
 <link rel="icon" href="data:,">
 <style>
   /* ── LunarCrush brand fonts (self-hosted, open-license) ── */
@@ -232,7 +233,10 @@
 </footer>
 
 <script>
-const DATA_URL = './social-data/social.json';
+// Live data + fresh AI summaries from the Worker (refreshes every 5 min, edge-cached);
+// falls back to the committed snapshot if the Worker is unreachable.
+const WORKER_URL = 'https://hazard-aq.lunarcrush.workers.dev/social';
+const SNAPSHOT_URL = './social-data/social.json';
 
 const fmt = n => {
   if(n==null) return '—';
@@ -446,10 +450,14 @@ function render(d){
   });
 }
 
-fetch(DATA_URL).then(r=>r.json()).then(render).catch(e=>{
-  document.getElementById('app').innerHTML='<div class="loading">Could not load social data.<br><span style="font-size:12px;color:#4A4E66">'+e+'</span></div>';
-  document.getElementById('asof').textContent='';
-});
+const loadJSON = url => fetch(url).then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+loadJSON(WORKER_URL)
+  .then(render)
+  .catch(() => loadJSON(SNAPSHOT_URL).then(render))   // fallback to committed snapshot
+  .catch(e=>{
+    document.getElementById('app').innerHTML='<div class="loading">Could not load social data.<br><span style="font-size:12px;color:#4A4E66">'+e+'</span></div>';
+    document.getElementById('asof').textContent='';
+  });
 </script>
 </body>
 </html>
