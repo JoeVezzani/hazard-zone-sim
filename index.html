@@ -11,14 +11,14 @@
 <meta property="og:site_name" content="Hazard Zone Simulator">
 <meta property="og:title" content="GKN Aerospace — Hazard Zone Simulator">
 <meta property="og:description" content="Interactive blast-radius & toxic-plume model for a 34,000-gal MMA tank emergency in Garden Grove, CA. Drag the sliders.">
-<meta property="og:image" content="https://joevezzani.github.io/hazard-zone-sim/og.png">
+<meta property="og:image" content="https://joevezzani.github.io/hazard-zone-sim/og.png?v=2">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="https://joevezzani.github.io/hazard-zone-sim/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="GKN Aerospace — Hazard Zone Simulator">
 <meta name="twitter:description" content="Interactive blast-radius & toxic-plume model. Drag the sliders.">
-<meta name="twitter:image" content="https://joevezzani.github.io/hazard-zone-sim/og.png">
+<meta name="twitter:image" content="https://joevezzani.github.io/hazard-zone-sim/og.png?v=2">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%230a0c0f'/%3E%3Ccircle cx='50' cy='50' r='26' fill='%23ff2a2a'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
@@ -256,12 +256,16 @@
     .ex-zone .zt b { color:#fff; }
     .ex-zone .zd { font-family:'Share Tech Mono',monospace; color:#ffb066; }
     .ex-zone .zeff { display:block; color:var(--text); font-size:.76rem; line-height:1.45; margin-top:1px; }
+    #explainCard .ex-back { font-family:'Share Tech Mono',monospace; font-size:.62rem; letter-spacing:.03em;
+      cursor:pointer; background:rgba(54,194,255,.12); color:#7fd8ff; border:1px solid #36c2ff55;
+      padding:5px 11px; border-radius:5px; transition:all .15s; white-space:nowrap; }
+    #explainCard .ex-back:hover { background:rgba(54,194,255,.24); border-color:#36c2ff; color:#cdeeff; }
   </style>
   <div id="explainModal" onclick="if(event.target===this)closeExplain()">
     <div id="explainCard">
       <div class="ex-hd">
-        <span class="dot9" style="background:#ff2a2a;width:11px;height:11px;border-radius:50%;"></span>
-        <h2>What happens if the tank fails</h2>
+        <button class="ex-back" onclick="closeExplain()">&larr; Back to the simulator</button>
+        <h2 style="margin-left:8px;">What happens if the tank fails</h2>
         <button class="ex-x" onclick="closeExplain()" aria-label="Close">&times;</button>
       </div>
       <div class="ex-body">
@@ -1117,21 +1121,32 @@ function onTime() {
 }
 
 // ── failure explainer modal ────────────────────────────────
-function openExplain()  {
+function openExplain(push)  {
   // mirror the live blast distances from the sidebar into the radius diagram
   ['fb','sv','md','gl'].forEach(k => {
     const src = document.getElementById('d-'+k), dst = document.getElementById('ex-d-'+k);
     if (src && dst) dst.textContent = src.textContent;
   });
   document.getElementById('explainModal').classList.add('open');
+  // shareable deep link: <site>/#explain opens this panel directly
+  if (push !== false && location.hash !== '#explain') history.pushState(null, '', '#explain');
 }
-function closeExplain() { document.getElementById('explainModal').classList.remove('open'); }
+function closeExplain() {
+  document.getElementById('explainModal').classList.remove('open');
+  if (location.hash === '#explain') history.replaceState(null, '', location.pathname + location.search);
+}
 window.addEventListener('keydown', e => { if (e.key === 'Escape') closeExplain(); });
+// browser Back closes the panel; arriving at #explain (pasted link) opens it
+window.addEventListener('popstate', () => {
+  if (location.hash === '#explain') openExplain(false);
+  else document.getElementById('explainModal').classList.remove('open');
+});
 
 // ── init ───────────────────────────────────────────────────
 onSlide();
 loadWeather();
 setInterval(loadWeather, 10 * 60 * 1000);      // refresh obs + hourly series every 10 min
+if (location.hash === '#explain') openExplain(false);   // honor a shared deep link on load
 
 // Force Leaflet to recalculate size after layout settles
 setTimeout(() => { map.invalidateSize(); }, 100);
