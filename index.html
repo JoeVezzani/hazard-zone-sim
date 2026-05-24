@@ -598,7 +598,8 @@
         <span class="wxhd">◍ LIVE WX</span><br>
         <span class="wb" id="wxb-temp">—</span> · <span id="wxb-cond">loading…</span><br>
         WIND <span class="wb" id="wxb-wind">—</span><br>
-        AQI <span class="wb" id="wxb-aqi">—</span>
+        AQI <span class="wb" id="wxb-aqi">—</span><br>
+        <span id="wxb-src" style="font-size:.88em;color:var(--dim)">— wind source —</span>
       </div>
 
       <div id="timebar">
@@ -1212,12 +1213,19 @@ async function fetchNWSCurrent() {
 async function applyNWSCurrent() {
   const o = await fetchNWSCurrent();
   const src = document.getElementById('wx-src');
-  if (!o) { if (src && (!src.textContent || src.textContent === '—')) src.textContent = 'Open-Meteo model'; return; }
+  const mapSrc = document.getElementById('wxb-src');
+  if (!o) {
+    // no recent station obs — the readouts already hold the Open-Meteo model values
+    if (src) src.textContent = 'Open-Meteo model';
+    if (mapSrc) { mapSrc.textContent = '◷ model (Open-Meteo)'; mapSrc.style.color = '#ffb066'; }
+    return;
+  }
   // override the observed-now readouts with the real station reading
   setTxt('wx-wind',  compass(o.wdDeg) + ' ' + o.wsMph + ' mph');
   setTxt('wx-gust',  (o.wgMph || o.wsMph) + ' mph');
   setTxt('wxb-wind', compass(o.wdDeg) + ' ' + o.wsMph + ' mph');
   if (src) src.textContent = o.station + ' · ' + o.dist + ' · ' + o.minsAgo + 'm ago';
+  if (mapSrc) { mapSrc.textContent = '● ' + o.station + ' anemometer · ' + o.minsAgo + 'm ago'; mapSrc.style.color = '#00e676'; }
   // re-aim the plume from the real obs (override the "now" hour in the series)
   if (windSeries[nowIdx]) windSeries[nowIdx] = Object.assign({}, windSeries[nowIdx], { dir: o.wdDeg, speed: o.wsMph, gust: o.wgMph || o.wsMph });
   if (!userScrubbed) { document.getElementById('sl-time').value = String(nowIdx); onTime(); }
