@@ -349,6 +349,7 @@
         <div class="row"><span class="lbl">Wind</span><span class="val" id="wx-wind">—</span></div>
         <div class="row"><span class="lbl">Gusts</span><span class="val w" id="wx-gust">—</span></div>
         <div class="row"><span class="lbl">Updated</span><span class="val" id="wx-time">—</span></div>
+        <div class="row"><span class="lbl">Source</span><span class="val" id="wx-src" style="font-size:.6rem">—</span></div>
       </div>
 
       <div>
@@ -378,6 +379,11 @@
           <span class="tog-label"><span class="dot9" style="background:#ffd000"></span>Evac order</span>
           <div class="sw on" id="sw-evac"></div>
         </div>
+        <div class="tog-row" onclick="tog('shelter')">
+          <span class="tog-label"><span class="dot9" style="background:#00e676"></span>Shelters</span>
+          <div class="sw on" id="sw-shelter"></div>
+        </div>
+        <div style="font-size:.57rem;color:var(--dim);margin:1px 0 4px;line-height:1.35;">Reference evacuation-site locations — call to confirm space &amp; pets, and follow official orders.</div>
         <div class="tog-row" onclick="tog('aq')">
           <span class="tog-label"><span class="dot9" style="background:#3cc878"></span>Air quality sensors <span id="aq-sensors-n" style="color:var(--dim);font-size:.92em"></span></span>
           <div class="sw" id="sw-aq"></div>
@@ -664,6 +670,7 @@ const blastGrp = L.layerGroup().addTo(map);
 const plumeGrp = L.layerGroup().addTo(map);
 const evacGrp  = L.layerGroup().addTo(map);
 const modelGrp = L.layerGroup().addTo(map);
+const shelterGrp = L.layerGroup().addTo(map);
 
 // ── multi-model blast comparison ───────────────────────────
 // Each model's OWN first-principles estimate for the real single tank (~7,000 gal
@@ -772,7 +779,7 @@ function drawModels() {
 }
 
 // ── layer state ────────────────────────────────────────────
-const state = { basemap:true, blast:true, plume:true, evac:true, t2:true, t3:true, aq:false, plumeModel:'bm', primaryModel:'openai' };
+const state = { basemap:true, blast:true, plume:true, evac:true, shelter:true, t2:true, t3:true, aq:false, plumeModel:'bm', primaryModel:'openai' };
 
 // Plume dispersion model selector (mutually exclusive): B-M / DEGADIS / neutral Gaussian.
 const PM_DESC = {
@@ -798,6 +805,7 @@ function tog(name) {
   }
   if (name === 't2' || name === 't3') { onSlide(); return; }   // recompute blast + plume + models
   if (name === 'aq') { if (state.aq) { map.addLayer(aqGrp); loadSensors(); } else map.removeLayer(aqGrp); return; }
+  if (name === 'shelter') { if (state.shelter) map.addLayer(shelterGrp); else map.removeLayer(shelterGrp); return; }
   const grp = name==='blast' ? blastGrp : name==='plume' ? plumeGrp : evacGrp;
   if (state[name]) map.addLayer(grp); else map.removeLayer(grp);
 }
@@ -1025,6 +1033,29 @@ function drawEvac() {
   }).addTo(evacGrp);
 }
 
+// ── evacuation shelters ────────────────────────────────────
+// Reference locations of OC emergency shelters (real public buildings). We show
+// where + a phone to call — NOT a live capacity status, which we can't verify and
+// shouldn't fake in a real emergency. Always confirm with officials before going.
+const SHELTERS = [
+  { name:'Freedom Hall — Mile Square Park', addr:'16801 Euclid St, Fountain Valley', lat:33.7185, lng:-117.9381, phone:'(714) 973-6600' },
+  { name:'Savanna High School',             addr:'301 N Gilbert St, Anaheim',        lat:33.8350, lng:-117.9681, phone:'(714) 220-4262' },
+  { name:'Kennedy High School',             addr:'8281 Walker St, La Palma',         lat:33.8425, lng:-118.0387, phone:'(714) 220-4101' },
+  { name:'Ocean View High School',          addr:'17071 Gothard St, Huntington Beach',lat:33.7145, lng:-118.0006, phone:'(714) 848-0656' },
+  { name:'Golden West College Gym',         addr:'15744 Goldenwest St, Huntington Beach',lat:33.7361,lng:-118.0003, phone:'(714) 628-7060' },
+];
+function drawShelters() {
+  shelterGrp.clearLayers();
+  const icon = L.divIcon({ className:'', iconSize:[14,14], iconAnchor:[7,7],
+    html:'<div style="width:14px;height:14px;border-radius:50%;border:2px solid #00e676;background:rgba(0,230,118,.3);box-shadow:0 0 8px #00e676;"></div>' });
+  SHELTERS.forEach(s => {
+    L.marker([s.lat, s.lng], { icon, zIndexOffset:500 })
+     .bindPopup('<b style="color:#00e676">🏫 ' + s.name + '</b><br>' + s.addr +
+       '<br>📞 ' + s.phone + '<br><span style="color:#888;font-size:.9em">Call to confirm space &amp; pets · follow official orders</span>')
+     .addTo(shelterGrp);
+  });
+}
+
 // ── formatting helpers ─────────────────────────────────────
 function ftStr(m) { return Math.round(m*3.281).toLocaleString()+' ft'; }
 function miStr(m) { return (m/1609).toFixed(2)+' mi'; }
@@ -1150,6 +1181,48 @@ function fmtHour(iso) {
   return isNaN(d) ? hh : `${days[d.getDay()]} ${hh}`;
 }
 
+// Ground-truth current wind from the nearest NWS ASOS anemometer (keyless, real
+// physical station). Beats the gridded model for the "now" reading that aims the
+// plume. Tries closest-first; null + sanity + 45-min-staleness checks (per Michael
+// Fabian's fork). Returns the observation or null (then we keep the Open-Meteo model).
+const NWS_STATIONS = [
+  { id:'KSLI', dist:'2.5 mi' },   // Los Alamitos AAF
+  { id:'KORG', dist:'4 mi'   },   // Orange County
+  { id:'KSNA', dist:'4 mi'   },   // John Wayne Airport
+];
+async function fetchNWSCurrent() {
+  for (const st of NWS_STATIONS) {
+    try {
+      const r = await fetch('https://api.weather.gov/stations/' + st.id + '/observations/latest',
+        { headers: { 'User-Agent': 'GKN-HazardZoneSim (joevezzani.github.io/hazard-zone-sim)', 'Accept': 'application/geo+json' } });
+      if (!r.ok) throw 0;
+      const p = (await r.json()).properties || {};
+      const wsMs = p.windSpeed && p.windSpeed.value, wdDeg = p.windDirection && p.windDirection.value;
+      const wgMs = p.windGust && p.windGust.value;
+      if (wsMs == null || wdDeg == null) throw 0;
+      const wsMph = Math.round(wsMs * 2.23694);
+      if (wsMph < 0 || wsMph > 80) throw 0;                                   // sanity
+      const minsAgo = Math.round((Date.now() - new Date(p.timestamp)) / 60000);
+      if (minsAgo > 45) throw 0;                                              // too stale
+      return { wsMph, wdDeg, wgMph: wgMs ? Math.round(wgMs * 2.23694) : wsMph, station: st.id, dist: st.dist, minsAgo };
+    } catch (e) { /* try next station */ }
+  }
+  return null;
+}
+async function applyNWSCurrent() {
+  const o = await fetchNWSCurrent();
+  const src = document.getElementById('wx-src');
+  if (!o) { if (src && (!src.textContent || src.textContent === '—')) src.textContent = 'Open-Meteo model'; return; }
+  // override the observed-now readouts with the real station reading
+  setTxt('wx-wind',  compass(o.wdDeg) + ' ' + o.wsMph + ' mph');
+  setTxt('wx-gust',  (o.wgMph || o.wsMph) + ' mph');
+  setTxt('wxb-wind', compass(o.wdDeg) + ' ' + o.wsMph + ' mph');
+  if (src) src.textContent = o.station + ' · ' + o.dist + ' · ' + o.minsAgo + 'm ago';
+  // re-aim the plume from the real obs (override the "now" hour in the series)
+  if (windSeries[nowIdx]) windSeries[nowIdx] = Object.assign({}, windSeries[nowIdx], { dir: o.wdDeg, speed: o.wsMph, gust: o.wgMph || o.wsMph });
+  if (!userScrubbed) { document.getElementById('sl-time').value = String(nowIdx); onTime(); }
+}
+
 async function loadWeather() {
   try {
     const u = 'https://api.open-meteo.com/v1/forecast?latitude=33.7739&longitude=-117.9410'
@@ -1186,6 +1259,7 @@ async function loadWeather() {
     sl.max = String(windSeries.length - 1);
     if (!userScrubbed) sl.value = String(nowIdx);   // park at NOW unless the user moved it
     onTime();
+    await applyNWSCurrent();   // ground-truth the "now" reading from the nearest NWS anemometer
     if (userLoc) { computeCoverage(); renderVerdict(); }   // refresh scenario-coverage as the forecast updates
   } catch (e) {
     setTxt('wx-cond', 'unavailable'); setTxt('wxb-cond', 'unavailable');
@@ -1464,6 +1538,7 @@ function renderVerdict() {
 
 // ── init ───────────────────────────────────────────────────
 onSlide();
+drawShelters();
 loadWeather();
 setInterval(loadWeather, 90 * 1000);           // refresh obs + hourly series ~every 90s
 loadAirQuality();
