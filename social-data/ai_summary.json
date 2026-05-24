@@ -1,0 +1,21 @@
+{
+ "headline": "Garden Grove's chemical-tank crisis is now a top national story",
+ "situation": [
+   "A 34,000-gallon tank of MMA (methyl methacrylate) at the GKN Aerospace plant on Western Ave is overheating and at risk of leaking or exploding. Garden Grove's fire chief framed it bluntly: the tank either fails and spills, or it ruptures.",
+   "Roughly 44,000 Orange County residents are under evacuation orders. Shelters opened, filled, and are now described as at breaking point - two more were stood up as the zone expanded into Anaheim and neighboring cities.",
+   "Governor Newsom proclaimed a state of emergency in Orange County and activated the Cal OES State Operations Center. Sen. Adam Schiff says he's monitoring closely.",
+   "GKN Aerospace is already facing a class-action lawsuit over the potential disaster - the legal and political story is moving as fast as the safety one.",
+   "Volume is still accelerating ~48 hours in: tens of millions of interactions a day, trending UP, and spreading from the garden grove topic into orange county and anaheim. This is not peaking - it's climbing."
+ ],
+ "official_read": "The official channel is tight and directive. Newsom's state-of-emergency post is the single loudest authoritative voice (505K interactions); Cal OES is running real-time, bilingual logistics - shelter locations, city-specific updates, 'listen to local authorities.' Verified TV news (ABC7, CBSLA, NBCLA, KTLA) carries the breaking coverage and the Fire Chief's briefings. Calm, factual, focused on evacuation and shelter.",
+ "community_read": "The community channel is emotional and improvised: on-the-ground POV clips, 'prayers for Garden Grove,' frustration at GKN, and people racing to understand their own risk. Notably, a resident-built fallout/blast map made with Claude went viral (822K interactions) - citizens are building their own hazard tools faster than official maps circulate. Sentiment sits just below neutral - anxious, not panicked.",
+ "network_reads": {
+   "tweet": "Most posts and the official record. Newsom, Cal OES, Schiff, scanner accounts - real-time updates, breaking news, and commentary all collide here.",
+   "tiktok": "Biggest by far. The emotional, on-the-ground layer - viral breaking clips from ABC7LA/CBSLA and resident POVs. This is where most people are actually seeing it.",
+   "youtube": "The explainer layer. Long-form news broadcasts - 'what to know 48 hours in,' state-of-emergency recaps - from CBSLA, NBCLA, KTLA, Telemundo, Univision.",
+   "instagram": "Lower volume, mostly verified-news reshares.",
+   "reddit": "Smallest reach but the most deliberative - locals comparing notes, analyzing the chemistry and the risk.",
+   "news": "The authoritative written record (LA Times, Fox, NBC, CBS, NPR, USA Today, NY Post, HuffPost) - every major outlet now has a desk on it."
+ },
+ "as_of_note": "AI summary generated from live LunarCrush social data."
+}
