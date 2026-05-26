@@ -48,6 +48,18 @@
   #header h1 { font-family:'Bebas Neue',sans-serif; font-size:.95rem; letter-spacing:.1em; color:#fff; }
   #header .sub { font-family:'Share Tech Mono',monospace; font-size:.58rem; color:var(--dim); margin-left:auto; }
 
+  /* live status banner (reflects the current OCFA situation) */
+  #statusbar { flex:0 0 auto; display:flex; align-items:flex-start; gap:10px; padding:8px 14px;
+    background:linear-gradient(90deg,rgba(0,230,118,.12),rgba(255,208,0,.05)); border-bottom:1px solid rgba(0,230,118,.32);
+    font-size:.7rem; line-height:1.45; color:var(--text); z-index:1999; }
+  #statusbar .sb-dot { width:8px;height:8px;border-radius:50%;background:#00e676;box-shadow:0 0 8px #00e676;margin-top:4px;flex-shrink:0; }
+  #statusbar .sb-txt { flex:1; min-width:0; }
+  #statusbar .sb-txt b { color:#fff; }
+  #statusbar .sb-src { display:block; color:var(--dim); font-family:'Share Tech Mono',monospace; font-size:.57rem; margin-top:3px; }
+  #statusbar .sb-x { cursor:pointer; color:var(--dim); font-size:1.15rem; line-height:1; padding:0 2px; flex-shrink:0; }
+  #statusbar .sb-x:hover { color:#fff; }
+  @media(max-width:760px){ #statusbar { font-size:.64rem; padding:7px 11px; } }
+
   #body { display:flex; flex:1 1 0; min-height:0; }
 
   /* ── sidebar ── */
@@ -215,8 +227,18 @@
     <h1>GKN AEROSPACE — HAZARD ZONE SIMULATOR</h1>
     <button id="explainBtn" onclick="openExplain()" aria-label="What happens if the tank fails">⚠ What happens if it fails?</button>
     <a id="socialBtn" href="./social.html" aria-label="Live social intelligence">📡 Live social</a>
-    <div class="sub">12122 WESTERN AVE, GARDEN GROVE CA &nbsp;|&nbsp; MMA TANK EMERGENCY &nbsp;|&nbsp; MAY 23 2026</div>
+    <div class="sub">12122 WESTERN AVE, GARDEN GROVE CA &nbsp;|&nbsp; MMA TANK INCIDENT &nbsp;|&nbsp; UPDATED MAY 26 2026</div>
     <button id="menuBtn" onclick="toggleMenu()" aria-label="Toggle controls"><span class="bars"><i></i><i></i><i></i></span> DATA</button>
+  </div>
+
+  <!-- LIVE STATUS BANNER -->
+  <div id="statusbar">
+    <span class="sb-dot"></span>
+    <div class="sb-txt">
+      <b>UPDATE · May 26:</b> Orange County Fire Authority says the catastrophic-explosion (BLEVE) threat has been <b style="color:#7fe0a8">eliminated</b> — the tank has cooled. The evacuation order is <b>reduced to ~16,000 residents</b> (from ~50,000); roughly 25,000 have returned home. A <b>smaller</b> explosion, fire, or leak is still possible, so the reduced zone (yellow box) stays active — outside it, officials say day-to-day life can continue normally. The model below shows the <b>worst-case</b> scenario for reference, not the current official threat level.
+      <span class="sb-src">Per OCFA via ABC7 / NBC LA · this simulator is an unofficial estimate — follow official orders</span>
+    </div>
+    <span class="sb-x" onclick="document.getElementById('statusbar').remove()" title="Dismiss">×</span>
   </div>
 
   <!-- FAILURE EXPLAINER MODAL -->
@@ -630,11 +652,14 @@
 const GKN = [33.783583, -117.999833];
 let WIND_BEARING = 45;       // plume travel bearing (deg from N). Updated live from real wind.
 // Official evacuation order box (authoritative, fixed). Shared by drawEvac + the locator.
+// REDUCED evacuation order as of May 26 2026 (OCFA): after the BLEVE threat was
+// eliminated overnight 5/25, the zone shrank from ~50k to ~16k residents.
+// N Orangewood Ave · S Garden Grove Blvd · E Dale St · W Knott Ave.
 const EVAC_BOX = [
-  [33.8181, -118.0284],   // NW  Ball Rd × Valley View St
-  [33.8181, -117.9845],   // NE  Ball Rd × Dale St
-  [33.7669, -117.9845],   // SE  Trask Ave × Dale St
-  [33.7669, -118.0284],   // SW  Trask Ave × Valley View St
+  [33.7958, -118.0116],   // NW  Orangewood Ave × Knott Ave
+  [33.7958, -117.9842],   // NE  Orangewood Ave × Dale St
+  [33.7739, -117.9842],   // SE  Garden Grove Blvd × Dale St
+  [33.7739, -118.0116],   // SW  Garden Grove Blvd × Knott Ave
 ];
 let lastBlast = null, lastPlume = null;   // most recent computed rings, for the "am I in the zone?" check
 let liveWindSeeded = false;  // seed the speed slider from observed wind once
@@ -1012,22 +1037,21 @@ function drawPlume(p) {
 
 function drawEvac() {
   evacGrp.clearLayers();
-  // The CURRENT (expanded) order from Orange County officials — north of Trask Ave,
-  // south of Ball Rd, east of Valley View St, west of Dale St (~40,000 residents
-  // across Garden Grove + parts of W. Anaheim, Stanton & Cypress). Authoritative:
-  // fixed, does not move with the model.
+  // REDUCED official order (OCFA, May 26 2026) after the catastrophic-explosion threat
+  // was eliminated: ~16,000 residents (down from ~50k). N Orangewood Ave · S Garden
+  // Grove Blvd · E Dale St · W Knott Ave. Authoritative: fixed, does not move with the model.
   const box = EVAC_BOX;
   L.polygon(box, {
     color:'#ffd000', weight:2, opacity:.85,
     fillColor:'#ffd000', fillOpacity:.05, dashArray:'6 4',
   })
-  .bindTooltip('<b style="color:#ffd000">OFFICIAL EVACUATION ORDER</b><br>~40,000 residents · GG + W. Anaheim, Stanton, Cypress<br>N of Trask Ave · S of Ball Rd<br>E of Valley View St · W of Dale St', {sticky:true})
+  .bindTooltip('<b style="color:#ffd000">REDUCED EVACUATION ORDER</b><br>~16,000 residents (was ~50k) · reduced May 26<br>N Orangewood Ave · S Garden Grove Blvd<br>E Dale St · W Knott Ave<br><span style="color:#9fb0c8">Outside this zone: officials say day-to-day normal</span>', {sticky:true})
   .addTo(evacGrp);
 
-  L.marker([33.8181, -118.0284], {
+  L.marker([33.7958, -118.0116], {
     icon: L.divIcon({
       className:'',
-      html:`<div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,208,0,.9);background:rgba(10,12,15,.78);padding:2px 5px;border-radius:2px;white-space:nowrap;">OFFICIAL EVACUATION ORDER · ~40,000</div>`,
+      html:`<div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,208,0,.9);background:rgba(10,12,15,.78);padding:2px 5px;border-radius:2px;white-space:nowrap;">REDUCED EVAC ORDER · ~16,000</div>`,
       iconAnchor:[0,0],
     }),
     interactive:false,
