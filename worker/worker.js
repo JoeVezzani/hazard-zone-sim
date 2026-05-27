@@ -282,6 +282,30 @@ export default {
       const out = await refreshSocial(env);
       return new Response(out, { headers: CORS });
     }
+    // ── /topic?q=<keyword> — live LunarCrush preview for the "track your own topic" teaser ──
+    if (path === '/topic') {
+      const q = (url.searchParams.get('q') || '').toLowerCase().trim().slice(0, 40).replace(/[^a-z0-9 .&_$-]/g, '');
+      if (!q) return new Response(JSON.stringify({ error: 'no query' }), { headers: CORS, status: 400 });
+      const ck = 'tprev:' + q;
+      const cached = await env.AQ.get(ck);
+      if (cached) return new Response(cached, { headers: CORS });
+      const t = (await lc(env, `/topic/${enc(q)}/v1`)).data;
+      let out;
+      if (!t || t.num_posts == null) {
+        out = JSON.stringify({ q, found: false });
+      } else {
+        const ti = t.types_interactions || {}, tc = t.types_count || {};
+        const by = [...new Set(Object.keys(ti).concat(Object.keys(tc)))]
+          .map(k => ({ net: NET_LABEL[k] || k, posts: tc[k] || 0, int: ti[k] || 0 })).sort((a, b) => b.int - a.int);
+        out = JSON.stringify({ q, found: true, title: t.title, interactions_24h: t.interactions_24h,
+          num_contributors: t.num_contributors, num_posts: t.num_posts, topic_rank: t.topic_rank,
+          trend: t.trend, sentiment: t.types_sentiment || {}, by_network: by });
+      }
+      await env.AQ.put(ck, out, { expirationTtl: 600 });   // 10-min cache per topic
+      const r = new Response(out, { headers: CORS });
+      ctx.waitUntil(caches.default.put(req, r.clone()));
+      return r;
+    }
     const cache = caches.default;
     const hit = await cache.match(req);
     if (hit) return hit;

@@ -209,6 +209,38 @@
     border-radius:10px;box-shadow:var(--glow);transition:.2s;white-space:nowrap}
   .cta-btn:hover{background:var(--purple-h);transform:translateY(-1px)}
   @media(max-width:760px){.cta-card{padding:26px;gap:18px}.cta-btn{width:100%;text-align:center}}
+
+  /* "track any topic" teaser */
+  .tryit{display:flex;flex-direction:column;gap:14px}
+  #tryForm{display:flex;gap:10px}
+  #tryInput{flex:1;background:var(--surface);border:1px solid var(--border-sub);border-radius:10px;color:var(--t-head);
+    font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;padding:14px 16px;outline:none}
+  #tryInput:focus{box-shadow:0 0 0 2px rgba(110,60,245,.55)}
+  #tryBtn{flex:none;background:var(--purple);color:#fff;font-weight:600;font-size:15px;padding:0 24px;border:none;border-radius:10px;cursor:pointer;transition:.2s}
+  #tryBtn:hover{background:var(--purple-h)}
+  .try-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .try-chips .tchip{cursor:pointer;font-size:13px;color:var(--purple-l);background:var(--p-tint);border:1px solid var(--border-acc);
+    padding:6px 13px;border-radius:9999px;transition:.15s}
+  .try-chips .tchip:hover{background:rgba(110,60,245,.18);color:#fff}
+  #tryResult{margin-top:4px}
+  .try-loading,.try-none{color:var(--t-muted);font-size:14px;padding:12px 2px}
+  .try-none b{color:var(--t-body)}
+  .try-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .try-title{font-family:Butler,serif;font-size:26px;color:var(--t-head);text-transform:capitalize}
+  .try-rank{font-size:12px;color:var(--cyan);background:var(--c-tint);padding:3px 9px;border-radius:9999px;font-weight:600}
+  .try-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+  .try-metrics .tm{background:var(--canvas);border:1px solid var(--border);border-radius:12px;padding:16px}
+  .try-metrics .tmv{font-size:26px;font-weight:600;color:var(--t-head)}
+  .try-metrics .tml{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--t-muted);margin-top:5px}
+  .try-nets{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+  .try-nets .tn{display:flex;align-items:center;gap:12px}
+  .try-nets .tnl{width:90px;flex:none;font-size:13px;color:var(--t-body)}
+  .try-nets .tntrack{flex:1;height:8px;background:var(--surface);border-radius:9999px;overflow:hidden}
+  .try-nets .tnfill{display:block;height:100%;border-radius:9999px;background:linear-gradient(90deg,var(--purple),var(--cyan))}
+  .try-nets .tnv{width:64px;flex:none;text-align:right;font-size:12.5px;color:var(--t-head);font-weight:600}
+  .try-cta{display:inline-block;background:var(--purple);color:#fff;font-weight:600;font-size:15px;padding:13px 24px;border-radius:10px;box-shadow:var(--glow)}
+  .try-cta:hover{background:var(--purple-h)}
+  @media(max-width:600px){.try-metrics{grid-template-columns:1fr 1fr}}
   .more{display:block;text-align:center;margin-top:18px;color:var(--purple-l);font-size:13px;font-weight:600;cursor:pointer}
 
   @media(max-width:820px){
@@ -249,6 +281,28 @@
 // falls back to the committed snapshot if the Worker is unreachable.
 const WORKER_URL = 'https://hazard-aq.lunarcrush.workers.dev/social';
 const SNAPSHOT_URL = './social-data/social.json';
+const TOPIC_URL = 'https://hazard-aq.lunarcrush.workers.dev/topic';   // live preview for the "track any topic" teaser
+const SIGNUP_URL = 'https://lunarcrush.com/signup?utm_source=hazard-zone-sim&utm_medium=referral&utm_campaign=topic-teaser';
+function trackTopic(q){
+  q=(q||'').trim(); if(!q) return;
+  const inp=document.getElementById('tryInput'); if(inp) inp.value=q;
+  const res=document.getElementById('tryResult');
+  res.innerHTML='<div class="try-loading">Pulling live data for “'+esc(q)+'”…</div>';
+  fetch(TOPIC_URL+'?q='+encodeURIComponent(q)).then(r=>r.json()).then(t=>{
+    if(!t.found){ res.innerHTML='<div class="try-none">No tracked signal for <b>'+esc(q)+'</b> yet — try a bigger topic (a coin, public company, or well-known name).</div>'; return; }
+    const maxI=Math.max(...t.by_network.map(n=>n.int),1);
+    const tc = t.trend==='up'?'<span style="color:#7fe0a8">▲ rising</span>':t.trend==='down'?'<span style="color:#ff9b6b">▼ cooling</span>':'<span style="color:var(--t-muted)">● steady</span>';
+    res.innerHTML=
+      '<div class="try-head"><span class="try-title">'+esc(t.title||q)+'</span> '+tc+(t.topic_rank?' <span class="try-rank">#'+fmt(t.topic_rank)+' topic</span>':'')+'</div>'+
+      '<div class="try-metrics">'+
+        '<div class="tm"><div class="tmv num">'+fmt(t.interactions_24h)+'</div><div class="tml">interactions · 24h</div></div>'+
+        '<div class="tm"><div class="tmv num">'+fmt(t.num_contributors)+'</div><div class="tml">creators</div></div>'+
+        '<div class="tm"><div class="tmv num">'+fmt(t.num_posts)+'</div><div class="tml">posts</div></div>'+
+      '</div>'+
+      '<div class="try-nets">'+t.by_network.map(n=>'<div class="tn"><span class="tnl">'+esc(n.net)+'</span><span class="tntrack"><span class="tnfill" style="width:'+Math.max(5,Math.round(n.int/maxI*100))+'%"></span></span><span class="tnv num">'+fmt(n.int)+'</span></div>').join('')+'</div>'+
+      '<a class="try-cta" href="'+SIGNUP_URL+'" target="_blank" rel="noopener">See the full dashboard for '+esc(t.title||q)+' on LunarCrush →</a>';
+  }).catch(()=>{ res.innerHTML='<div class="try-none">Couldn’t reach the data right now — try again in a moment.</div>'; });
+}
 
 const fmt = n => {
   if(n==null) return '—';
@@ -457,6 +511,20 @@ function render(d){
     </div></section>`;
   }
 
+  // ── TRACK ANY TOPIC (interactive lead-gen teaser) ──
+  h+=`<section><div class="wrap">
+    <div class="sec-head"><span class="pill"><span class="dot"></span> Try it yourself</span>
+      <h2>Track any topic — live</h2><p>Type a coin, company, brand, or person. Same LunarCrush data, pulled live right now.</p></div>
+    <div class="card tryit">
+      <form id="tryForm" onsubmit="return false;">
+        <input id="tryInput" type="text" placeholder="e.g. Bitcoin, Tesla, Taylor Swift…" autocomplete="off" spellcheck="false">
+        <button id="tryBtn" type="submit">Track →</button>
+      </form>
+      <div class="try-chips">${['Bitcoin','Tesla','Nvidia','Taylor Swift','Ethereum'].map(c=>`<span class="tchip" data-q="${c.toLowerCase()}">${c}</span>`).join('')}</div>
+      <div id="tryResult"></div>
+    </div>
+  </div></section>`;
+
   // ── LUNARCRUSH CTA (lead-gen) ──
   h+=`<section><div class="wrap"><div class="cta-card">
     <div class="cta-l">
@@ -464,10 +532,15 @@ function render(d){
       <h2 class="butler">Catch the next story before it peaks</h2>
       <p>You just watched one event move across every network in real time — the AI read, who's talking, official vs community, the whole spread. That's <b>LunarCrush</b>: track any topic, coin, brand, or person across X, TikTok, YouTube, Reddit &amp; news, with live metrics and AI summaries.</p>
     </div>
-    <a class="cta-btn" href="https://lunarcrush.com/?utm_source=hazard-zone-sim&utm_medium=referral&utm_campaign=garden-grove" target="_blank" rel="noopener">Start tracking — free →</a>
+    <a class="cta-btn" href="https://lunarcrush.com/signup?utm_source=hazard-zone-sim&utm_medium=referral&utm_campaign=garden-grove" target="_blank" rel="noopener">Start tracking — free →</a>
   </div></div></section>`;
 
   document.getElementById('app').innerHTML=h;
+
+  // wire the "track any topic" teaser
+  const tryForm=document.getElementById('tryForm');
+  if(tryForm){ tryForm.addEventListener('submit',()=>trackTopic(document.getElementById('tryInput').value)); }
+  document.querySelectorAll('.try-chips .tchip').forEach(c=>c.addEventListener('click',()=>trackTopic(c.dataset.q)));
 
   // expand handlers
   document.querySelectorAll('.more').forEach(btn=>{
