@@ -152,9 +152,13 @@ async function buildSocial(env) {
   };
 }
 
-// content hash: re-run AI inference only when the post set / scale changes
+// Bump when the AI prompt changes, so cached summaries get regenerated.
+const PROMPT_VERSION = 'v3-aftermath';
+// content hash: re-run AI inference only when the post set / scale / trend / prompt changes
 async function contentHash(d) {
   const sig = [
+    PROMPT_VERSION,
+    (d.stats.trend || ''),                                   // re-infer when momentum flips
     ...d.official_gov.slice(0, 6).map(p => p.id),
     ...d.official_news.slice(0, 8).map(p => p.id),
     ...d.community.slice(0, 8).map(p => p.id),
@@ -184,7 +188,15 @@ function fallbackAI(d) {
 async function inferAI(env, d) {
   const fmtList = a => a.slice(0, 8).map(p => `- [${p.net}] @${p.handle} (${(p.int || 0).toLocaleString()} int): ${p.title}`).join('\n');
   const nets = d.by_network.map(b => `${b.label}: ${(b.posts || 0).toLocaleString()} posts / ${(b.int || 0).toLocaleString()} interactions`).join('; ');
-  const prompt = `You are a social-media intelligence analyst. From the live data below about the GKN Aerospace MMA chemical-tank emergency in Garden Grove, CA, write a tight situational summary.
+  const tr = (d.stats.trend || '').toLowerCase();
+  const phase = tr === 'down'
+    ? 'The conversation is PAST ITS PEAK and COOLING OFF (interactions falling). Frame this as a story winding down / in its aftermath — describe what happened and where it stands now in past/perfect tense. Do NOT imply an active, escalating emergency.'
+    : tr === 'up'
+    ? 'The conversation is still ACCELERATING — frame it as an active, developing story.'
+    : 'The conversation is holding steady.';
+  const prompt = `You are a social-media intelligence analyst. From the live data below about the GKN Aerospace MMA chemical-tank incident in Garden Grove, CA, write a tight situational summary that matches the CURRENT momentum.
+
+MOMENTUM: ${phase}
 
 STATS: ${(d.stats.interactions_24h || 0).toLocaleString()} interactions/24h, ${(d.stats.num_contributors || 0).toLocaleString()} creators posting, ${(d.stats.num_posts || 0).toLocaleString()} posts, trend ${d.stats.trend || 'up'}.
 NETWORKS: ${nets}
@@ -198,15 +210,19 @@ ${fmtList(d.official_news)}
 TOP COMMUNITY POSTS:
 ${fmtList(d.community)}
 
+IMPORTANT FRAMING: ${tr === 'down'
+  ? 'This story is in its AFTERMATH and winding down. Write the headline and bullets in PAST/PERFECT tense about how it played out and where it landed (e.g. "drew tens of millions of views", "evacuations were lifted", "the threat has eased"). Do NOT write a headline that implies an active, escalating, present-tense emergency. The posts below are mostly from the peak — summarize the arc, not a live crisis.'
+  : 'Write in present tense about the active, developing story.'}
+
 Return ONLY valid JSON (no markdown) with exactly these keys:
 {
- "headline": "one punchy sentence",
- "situation": ["5 short factual bullets on what's happening right now, grounded in the posts above"],
- "official_read": "2-3 sentences on how authorities/verified news are communicating",
- "community_read": "2-3 sentences on how the public is reacting",
+ "headline": "one punchy sentence matching the framing above",
+ "situation": ["5 short factual bullets on the current state of the story, grounded in the posts above and matching the framing above"],
+ "official_read": "2-3 sentences on how authorities/verified news communicated",
+ "community_read": "2-3 sentences on how the public reacted",
  "network_reads": {"tweet":"one line","tiktok-video":"one line","youtube-video":"one line","instagram-post":"one line","reddit-post":"one line","news":"one line"}
 }
-Be specific, factual, and grounded in the posts. No speculation beyond the data.`;
+Be specific, factual, grounded in the posts, and consistent with the framing. No speculation beyond the data.`;
 
   const res = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
     messages: [{ role: 'system', content: 'You output only valid minified JSON. No prose, no markdown fences.' }, { role: 'user', content: prompt }],

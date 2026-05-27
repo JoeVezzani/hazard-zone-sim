@@ -227,6 +227,7 @@
     <h1>GKN AEROSPACE — HAZARD ZONE SIMULATOR</h1>
     <button id="explainBtn" onclick="openExplain()" aria-label="What happens if the tank fails">⚠ What happens if it fails?</button>
     <a id="socialBtn" href="./social.html" aria-label="Live social intelligence">📡 Live social</a>
+    <a id="lcBtn" href="https://lunarcrush.com/?utm_source=hazard-zone-sim&utm_medium=referral&utm_campaign=garden-grove" target="_blank" rel="noopener" aria-label="Track social on LunarCrush">◐ Track social like this → LunarCrush</a>
     <div class="sub">12122 WESTERN AVE, GARDEN GROVE CA &nbsp;|&nbsp; MMA TANK INCIDENT &nbsp;|&nbsp; UPDATED MAY 27 2026</div>
     <button id="menuBtn" onclick="toggleMenu()" aria-label="Toggle controls"><span class="bars"><i></i><i></i><i></i></span> DATA</button>
   </div>
@@ -253,6 +254,11 @@
       background:rgba(110,198,248,.13); color:#9bd6fb; border:1px solid rgba(110,198,248,.4);
       padding:5px 10px; border-radius:5px; transition:all .15s; }
     #socialBtn:hover { background:rgba(110,198,248,.26); border-color:#6EC6F8; color:#d6efff; }
+    #lcBtn { margin-left:8px; font-family:'Share Tech Mono',monospace; font-size:.62rem;
+      letter-spacing:.03em; cursor:pointer; white-space:nowrap; flex-shrink:0; text-decoration:none;
+      background:linear-gradient(90deg,rgba(110,60,245,.24),rgba(110,198,248,.16)); color:#cdbcf9;
+      border:1px solid rgba(110,60,245,.5); padding:5px 10px; border-radius:5px; transition:all .15s; }
+    #lcBtn:hover { background:linear-gradient(90deg,rgba(110,60,245,.4),rgba(110,198,248,.28)); border-color:#6E3CF5; color:#fff; }
     #explainModal { position:fixed; inset:0; z-index:5000; display:none;
       background:rgba(5,7,10,.84); align-items:flex-start; justify-content:center;
       padding:28px 16px; overflow-y:auto; }
