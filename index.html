@@ -43,7 +43,7 @@
     background:var(--panel); border-bottom:1px solid var(--border);
     z-index:2000;
   }
-  .alert-dot { width:9px;height:9px;border-radius:50%;background:var(--red);animation:blink 1.2s infinite;flex-shrink:0; }
+  .alert-dot { width:9px;height:9px;border-radius:50%;background:#2a8a50;flex-shrink:0; }
   @keyframes blink { 0%,100%{box-shadow:0 0 0 0 rgba(255,42,42,.6);} 50%{box-shadow:0 0 0 5px rgba(255,42,42,0);} }
   #header h1 { font-family:'Bebas Neue',sans-serif; font-size:.95rem; letter-spacing:.1em; color:#fff; }
   #header .sub { font-family:'Share Tech Mono',monospace; font-size:.58rem; color:var(--dim); margin-left:auto; }
@@ -227,7 +227,7 @@
     <h1>GKN AEROSPACE — HAZARD ZONE SIMULATOR</h1>
     <button id="explainBtn" onclick="openExplain()" aria-label="What happens if the tank fails">⚠ What happens if it fails?</button>
     <a id="socialBtn" href="./social.html" aria-label="Live social intelligence">📡 Live social</a>
-    <div class="sub">12122 WESTERN AVE, GARDEN GROVE CA &nbsp;|&nbsp; MMA TANK INCIDENT &nbsp;|&nbsp; UPDATED MAY 26 2026</div>
+    <div class="sub">12122 WESTERN AVE, GARDEN GROVE CA &nbsp;|&nbsp; MMA TANK INCIDENT &nbsp;|&nbsp; UPDATED MAY 27 2026</div>
     <button id="menuBtn" onclick="toggleMenu()" aria-label="Toggle controls"><span class="bars"><i></i><i></i><i></i></span> DATA</button>
   </div>
 
@@ -235,7 +235,7 @@
   <div id="statusbar">
     <span class="sb-dot"></span>
     <div class="sb-txt">
-      <b>UPDATE · May 26:</b> Orange County Fire Authority says the catastrophic-explosion (BLEVE) threat has been <b style="color:#7fe0a8">eliminated</b> — the tank has cooled. The evacuation order is <b>reduced to ~16,000 residents</b> (from ~50,000); roughly 25,000 have returned home. A <b>smaller</b> explosion, fire, or leak is still possible, so the reduced zone (yellow box) stays active — outside it, officials say day-to-day life can continue normally. The model below shows the <b>worst-case</b> scenario for reference, not the current official threat level.
+      <b style="color:#7fe0a8">RESOLVED · May 26 2026 (7:30 PM):</b> OCFA declared <b style="color:#7fe0a8">all evacuation orders lifted</b> — no active chemical leak, no threat of explosion or fire, no risk to the public. All ~16,000 remaining residents cleared to return home. <b>Incident timeline:</b> 5/21 leak detected · 5/24 state of emergency, ~50k evacuated · 5/25 BLEVE threat eliminated · 5/26 zone reduced to ~16k · 5/26 7:30 PM all-clear, all orders lifted. The simulator below is a historical reference model for the worst-case scenario.
       <span class="sb-src">Per OCFA via ABC7 / NBC LA · this simulator is an unofficial estimate — follow official orders</span>
     </div>
     <span class="sb-x" onclick="document.getElementById('statusbar').remove()" title="Dismiss">×</span>
@@ -530,7 +530,7 @@
 
       <div>
         <div class="sec">What's real vs modeled</div>
-        <div class="leg"><div class="leg-sw" style="background:#ffd000"></div><b>Real:</b>&nbsp;site location + the official OCFA evacuation order (yellow box).</div>
+        <div class="leg"><div class="leg-sw" style="background:#ffd000"></div><b>Historical:</b>&nbsp;site location + the former OCFA evacuation zone (yellow box, all orders lifted May 26).</div>
         <div class="leg"><div class="leg-sw" style="background:#ff7300"></div><b>Modeled:</b>&nbsp;blast rings + toxic plume (heavier-than-air, current wind). Illustrative estimate — not official guidance.</div>
       </div>
 
@@ -651,9 +651,9 @@
 // (33°47'00.9"N 117°59'59.4"W); site of the real May 2026 MMA tank emergency.
 const GKN = [33.783583, -117.999833];
 let WIND_BEARING = 45;       // plume travel bearing (deg from N). Updated live from real wind.
-// Official evacuation order box (authoritative, fixed). Shared by drawEvac + the locator.
-// REDUCED evacuation order as of May 26 2026 (OCFA): after the BLEVE threat was
-// eliminated overnight 5/25, the zone shrank from ~50k to ~16k residents.
+// Former evacuation order box (authoritative, fixed). Shared by drawEvac + the locator.
+// All orders LIFTED May 26 2026 at 7:30 PM (OCFA): no active leak, no threat of
+// explosion or fire, no risk to public. All ~16k residents cleared to return home.
 // N Orangewood Ave · S Garden Grove Blvd · E Dale St · W Knott Ave.
 const EVAC_BOX = [
   [33.7958, -118.0116],   // NW  Orangewood Ave × Knott Ave
@@ -688,7 +688,7 @@ const gknIcon = L.divIcon({
 });
 L.marker(GKN, {icon:gknIcon, zIndexOffset:1000})
  .addTo(map)
- .bindPopup(`<b style="color:#ff5555">GKN AEROSPACE</b><br>12122 Western Ave, Garden Grove<br><span style="color:#ff9900">34,000-gal MMA tank — IN CRISIS</span>`)
+ .bindPopup(`<b style="color:#7fe0a8">GKN AEROSPACE</b><br>12122 Western Ave, Garden Grove<br><span style="color:#7fe0a8">34,000-gal MMA tank — INCIDENT RESOLVED MAY 26</span>`)
  .openPopup();
 
 // ── layer groups ───────────────────────────────────────────
@@ -1037,21 +1037,21 @@ function drawPlume(p) {
 
 function drawEvac() {
   evacGrp.clearLayers();
-  // REDUCED official order (OCFA, May 26 2026) after the catastrophic-explosion threat
-  // was eliminated: ~16,000 residents (down from ~50k). N Orangewood Ave · S Garden
-  // Grove Blvd · E Dale St · W Knott Ave. Authoritative: fixed, does not move with the model.
+  // RESOLVED (OCFA, May 26 2026 7:30 PM) — all evacuation orders lifted. No active
+  // leak, no threat. Former boundary shown for historical reference only.
+  // N Orangewood Ave · S Garden Grove Blvd · E Dale St · W Knott Ave.
   const box = EVAC_BOX;
   L.polygon(box, {
-    color:'#ffd000', weight:2, opacity:.85,
-    fillColor:'#ffd000', fillOpacity:.05, dashArray:'6 4',
+    color:'#ffd000', weight:1.5, opacity:.45,
+    fillColor:'#ffd000', fillOpacity:.02, dashArray:'6 4',
   })
-  .bindTooltip('<b style="color:#ffd000">REDUCED EVACUATION ORDER</b><br>~16,000 residents (was ~50k) · reduced May 26<br>N Orangewood Ave · S Garden Grove Blvd<br>E Dale St · W Knott Ave<br><span style="color:#9fb0c8">Outside this zone: officials say day-to-day normal</span>', {sticky:true})
+  .bindTooltip('<b style="color:#a0c8a0">FORMER EVACUATION ZONE</b><br>All orders lifted May 26 · OCFA: no active leak, no threat<br>N Orangewood Ave · S Garden Grove Blvd<br>E Dale St · W Knott Ave<br><span style="color:#9fb0c8">All residents cleared to return home</span>', {sticky:true})
   .addTo(evacGrp);
 
   L.marker([33.7958, -118.0116], {
     icon: L.divIcon({
       className:'',
-      html:`<div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,208,0,.9);background:rgba(10,12,15,.78);padding:2px 5px;border-radius:2px;white-space:nowrap;">REDUCED EVAC ORDER · ~16,000</div>`,
+      html:`<div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(160,200,160,.9);background:rgba(10,12,15,.78);padding:2px 5px;border-radius:2px;white-space:nowrap;">FORMER EVAC ZONE · ALL CLEAR May 26</div>`,
       iconAnchor:[0,0],
     }),
     interactive:false,
@@ -1546,7 +1546,7 @@ function renderVerdict() {
   let d=Math.abs(brg-WIND_BEARING)%360; if (d>180) d=360-d; const downwind=d<=55;
   let cls, head, msg;
   if (blast==='fireball' || blast==='severe damage') { cls='red'; head='Get out now'; msg='You are inside the modeled severe-blast zone, the most dangerous area. Leave immediately and follow emergency services.'; }
-  else if (inEvac) { cls='red'; head="You're in the evacuation zone"; msg='Your location is inside the official evacuation order. If you are still there, leave when safe and follow official instructions.'; }
+  else if (inEvac) { cls='green'; head="Former evacuation zone — all clear"; msg='Your location was inside the former OCFA evacuation zone. All orders were lifted May 26, 2026 — OCFA confirmed no active leak, no threat of explosion or fire. You are clear to return home.'; }
   else if (inPlume) { cls='orange'; head="You're in the plume path"; msg='The modeled toxic plume is blowing over your location right now (toward ' + compass(WIND_BEARING) + '). Go indoors, close windows, turn off any AC pulling in outside air, or move ' + compass((WIND_BEARING+180)%360) + ' (upwind).'; }
   else if (blast) { cls='orange'; head='Within the ' + blast + ' radius'; msg='You are within the modeled ' + blast + ' radius. Stay alert and be ready to move.'; }
   else if (downwind) { cls='orange'; head='Downwind, just outside the plume'; msg='You are downwind but outside the modeled plume edge. If the wind picks up or the release grows, this can change. Stay ready.'; }
