@@ -197,6 +197,18 @@
   footer a{color:var(--purple-l)}
 
   .loading{text-align:center;padding:80px 0;color:var(--t-muted)}
+
+  /* LunarCrush lead-gen CTA */
+  .cta-card{display:flex;align-items:center;gap:32px;background:linear-gradient(120deg,var(--card-hi),var(--card));
+    border:1px solid var(--border-acc);border-radius:16px;padding:40px;box-shadow:var(--glow);flex-wrap:wrap}
+  .cta-card .cta-l{flex:1;min-width:300px}
+  .cta-card h2{color:var(--t-head);font-family:Butler,serif;font-weight:700;font-size:clamp(26px,3.5vw,40px);margin:14px 0 12px;letter-spacing:-.5px}
+  .cta-card p{color:var(--t-body);font-size:16px;line-height:1.6;max-width:580px}
+  .cta-card p b{color:var(--t-head);font-weight:600}
+  .cta-btn{flex:none;background:var(--purple);color:#fff;font-weight:600;font-size:16px;padding:16px 32px;
+    border-radius:10px;box-shadow:var(--glow);transition:.2s;white-space:nowrap}
+  .cta-btn:hover{background:var(--purple-h);transform:translateY(-1px)}
+  @media(max-width:760px){.cta-card{padding:26px;gap:18px}.cta-btn{width:100%;text-align:center}}
   .more{display:block;text-align:center;margin-top:18px;color:var(--purple-l);font-size:13px;font-weight:600;cursor:pointer}
 
   @media(max-width:820px){
@@ -310,9 +322,18 @@ function areaChart(series, key, color){
 function render(d){
   const now = Math.floor(Date.now()/1000);
   const genDate = new Date(d.generated);
-  document.getElementById('asof').textContent = 'Live as of ' + genDate.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + ' · topic: Garden Grove';
-
   const s=d.stats, ai=d.ai;
+
+  // live trend drives the copy (so the page never claims "climbing" when it's cooling)
+  const trend = (s.trend||'').toLowerCase();
+  const trendChip = trend==='up' ? '<span style="color:#ff9b6b">▲ accelerating</span>'
+                  : trend==='down' ? '<span style="color:#7fe0a8">▼ cooling off</span>'
+                  : '<span style="color:var(--t-muted)">● steady</span>';
+  const propHead = trend==='up' ? 'The story is still climbing'
+                 : trend==='down' ? 'Past its peak — now cooling off'
+                 : 'Holding steady';
+  document.getElementById('asof').innerHTML = 'Live as of ' + genDate.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + ' · topic: Garden Grove · ' + trendChip;
+
   let h='';
 
   // ── METRICS ──
@@ -328,14 +349,14 @@ function render(d){
 
   // ── AI STATUS ──
   h+=`<section><div class="wrap"><div class="ai-hero">
-    <h3><span>🤖</span> What’s happening right now <span class="src-tag">AI summary</span></h3>
+    <h3><span>🤖</span> ${trend==='down'?'How the story played out':'What’s happening right now'} <span class="src-tag">AI summary</span></h3>
     <ul class="ai-list">${ai.situation.map((t,i)=>`<li><span class="n">${i+1}</span><span>${esc(t).replace(/^([^—:]+—)/,'<b>$1</b>')}</span></li>`).join('')}</ul>
   </div></div></section>`;
 
   // ── PROPAGATION CHART ──
   h+=`<section><div class="wrap">
     <div class="sec-head"><span class="pill"><span class="dot"></span> How it’s spreading</span>
-      <h2>The story is still climbing</h2><p>Hourly interaction volume across all networks. ${ai.network_reads?'':''}</p></div>
+      <h2>${propHead}</h2><p>Hourly interaction volume across all networks — trend is ${trend||'—'}.</p></div>
     <div class="chart-card"><h3>Interaction velocity</h3><div class="cap">Total engagement per hour · last ${d.timeseries.length}h</div>
       ${areaChart(d.timeseries,'int','#6E3CF5')}</div>
   </div></section>`;
@@ -435,6 +456,16 @@ function render(d){
       </div></div>
     </div></section>`;
   }
+
+  // ── LUNARCRUSH CTA (lead-gen) ──
+  h+=`<section><div class="wrap"><div class="cta-card">
+    <div class="cta-l">
+      <span class="pill"><span class="dot"></span> Powered by LunarCrush</span>
+      <h2 class="butler">Catch the next story before it peaks</h2>
+      <p>You just watched one event move across every network in real time — the AI read, who's talking, official vs community, the whole spread. That's <b>LunarCrush</b>: track any topic, coin, brand, or person across X, TikTok, YouTube, Reddit &amp; news, with live metrics and AI summaries.</p>
+    </div>
+    <a class="cta-btn" href="https://lunarcrush.com/?utm_source=hazard-zone-sim&utm_medium=referral&utm_campaign=garden-grove" target="_blank" rel="noopener">Start tracking — free →</a>
+  </div></div></section>`;
 
   document.getElementById('app').innerHTML=h;
 
